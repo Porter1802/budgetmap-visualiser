@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* QGDS tokens — single source for CSS-facing surfaces. Tints/shades are
+   produced with color-mix(in oklch, …) at use sites, never a forked scale. */
+:root {
+  --qld-blue: #005eb8;
+  --qld-black: #131212;
+  --qld-darkest: #222020;
+  --qld-darker: #444444;
+  --qld-dark: #78797e;
+  --qld-light: #e0e0e0;
+  --qld-lighter: #ebebeb;
+  --qld-lightest: #f5f5f5;
+  --qld-white: #ffffff;
+  --qld-info: #0085b3;
+  --qld-info-darker: #006a8f;
+  --qld-info-lighter: #e5eef5;
+  --qld-info-lightest: #eff4f9;
+  --qld-success: #339d37;
+  --qld-caution: #ffcc2c;
+  --qld-error: #e22339;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--qld-lightest);
+  color: var(--qld-darkest);
+  font-family: var(--font-noto-sans), "Noto Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Map canvas cursor language. */
+.maplibregl-canvas-container.maplibregl-interactive {
+  cursor: grab;
+}
+.maplibregl-canvas-container.maplibregl-interactive:active {
+  cursor: grabbing;
+}
+
+/* Focus rings on all interactive elements: 2px blue, 2px offset. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--qld-blue);
+  outline-offset: 2px;
+}
+
+.tabnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin, on-brand scrollbar inside the side panel. */
+.panel-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: var(--qld-light);
+  border-radius: 4px;
+}
+
+/* Restyle MapLibre's controls to QGDS button language. */
+.maplibregl-ctrl-group {
+  border: 1px solid var(--qld-light) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(19, 18, 18, 0.06) !important;
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button {
+  background: var(--qld-white);
+}
+.maplibregl-ctrl-group button:hover {
+  background: var(--qld-info-lighter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.panel-in {
+  animation: panelIn 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-in {
+    animation: none;
+  }
+}
