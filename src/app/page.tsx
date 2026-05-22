@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import SearchBox from "@/components/SearchBox";
-import RegionFilter from "@/components/RegionFilter";
+import RegionSidebar from "@/components/RegionSidebar";
 import SidePanel from "@/components/SidePanel";
 import { formatCompact } from "@/lib/format";
+import { allRegionsBounds, regionBounds, type Bounds } from "@/lib/geo";
 import type {
   FeatureCollection,
   ProjectFeature,
@@ -35,6 +36,9 @@ export default function Page() {
   const [members, setMembers] = useState<ProjectProps[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [focusBounds, setFocusBounds] = useState<{ bounds: Bounds; nonce: number } | null>(null);
+  const focusNonce = useRef(0);
 
   useEffect(() => {
     setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -70,12 +74,19 @@ export default function Page() {
     [shown]
   );
 
-  const toggleRegion = (code: number) =>
-    setSelectedRegions((prev) => {
-      const next = new Set(prev);
-      next.has(code) ? next.delete(code) : next.add(code);
-      return next;
-    });
+  const focusRegion = (code: number) => {
+    setSelectedRegions(new Set([code]));
+    if (!regions) return;
+    const b = regionBounds(regions, code);
+    if (b) setFocusBounds({ bounds: b, nonce: ++focusNonce.current });
+  };
+
+  const clearRegions = () => {
+    setSelectedRegions(new Set());
+    if (!regions) return;
+    const b = allRegionsBounds(regions);
+    if (b) setFocusBounds({ bounds: b, nonce: ++focusNonce.current });
+  };
 
   const selected = members ? members[activeIndex] ?? null : null;
 
@@ -91,6 +102,7 @@ export default function Page() {
           setActiveIndex(0);
         }}
         reducedMotion={reducedMotion}
+        focusBounds={focusBounds}
       />
 
       {/* Top-left: title + search */}
@@ -111,21 +123,19 @@ export default function Page() {
         <div className="pointer-events-auto">
           <SearchBox value={search} onChange={setSearch} />
         </div>
-      </div>
-
-      {/* Top-center: region filter */}
-      {meta && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden max-w-[52vw] -translate-x-1/2 lg:block">
-          <div className="pointer-events-auto max-h-[40vh] overflow-y-auto rounded-md border border-qld-light bg-qld-white/95 px-3 py-2 shadow-card backdrop-blur-sm">
-            <RegionFilter
+        {meta && (
+          <div className="pointer-events-auto">
+            <RegionSidebar
               regions={meta.regions}
               selected={selectedRegions}
-              onToggle={toggleRegion}
-              onClear={() => setSelectedRegions(new Set())}
+              open={sidebarOpen}
+              onToggleOpen={() => setSidebarOpen((o) => !o)}
+              onFocus={focusRegion}
+              onClear={clearRegions}
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <SidePanel
         project={selected}

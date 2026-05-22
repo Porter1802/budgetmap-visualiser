@@ -85,15 +85,15 @@ export function buildLayers(args: BuildArgs): Layer[] {
         lineWidthMinPixels: 1,
         getFillColor: (f) => {
           const sel = selectedRegions.has(codeOf(f));
-          if (!hasFilter) return rgba(BLUE_W80, 0.18);
-          return sel ? rgba(BLUE, 0.22) : rgba(BLUE_W80, 0.05);
+          if (!hasFilter) return rgba(BLUE, 0.16);
+          return sel ? rgba(BLUE, 0.42) : rgba(BLUE_W80, 0.08);
         },
         getLineColor: (f) => {
           const sel = selectedRegions.has(codeOf(f));
-          if (!hasFilter) return rgba(BLUE_K25, 0.5);
-          return sel ? rgba(BLUE_K25, 1) : rgba(BLUE_K25, 0.18);
+          if (!hasFilter) return rgba(BLUE_K25, 0.75);
+          return sel ? rgba(BLUE_K25, 1) : rgba(BLUE_K25, 0.28);
         },
-        getLineWidth: (f) => (hasFilter && selectedRegions.has(codeOf(f)) ? 2 : 1),
+        getLineWidth: (f) => (hasFilter && selectedRegions.has(codeOf(f)) ? 2.5 : 1.25),
         updateTriggers: {
           getFillColor: [selectedRegions],
           getLineColor: [selectedRegions],

@@ -7,6 +7,7 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { buildLayers, type ClusterPoint } from "@/lib/layers";
 import { formatCompact } from "@/lib/format";
 import type { ProjectFeature, ProjectProps, RegionCollection } from "@/lib/types";
+import type { Bounds } from "@/lib/geo";
 
 const QLD_CENTER: [number, number] = [146.5, -20.5];
 const HOVER_DELAY = 80;
@@ -26,6 +27,7 @@ export default function MapView({
   selectedId,
   onSelect,
   reducedMotion,
+  focusBounds,
 }: {
   features: ProjectFeature[];
   regions: RegionCollection | null;
@@ -33,6 +35,7 @@ export default function MapView({
   selectedId: number | null;
   onSelect: (members: ProjectProps[], coords: [number, number]) => void;
   reducedMotion: boolean;
+  focusBounds: { bounds: Bounds; nonce: number } | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -130,6 +133,18 @@ export default function MapView({
       },
     });
   }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, ready]);
+
+  // Zoom to a region's bounds when the sidebar requests focus. The nonce lets
+  // the same region re-trigger a fly-to on repeated clicks.
+  useEffect(() => {
+    if (!focusBounds || !mapRef.current || !ready) return;
+    mapRef.current.fitBounds(focusBounds.bounds, {
+      padding: { top: 80, bottom: 80, left: 320, right: 80 },
+      maxZoom: 10,
+      duration: reducedMotion ? 0 : 1000,
+      essential: true,
+    });
+  }, [focusBounds, ready, reducedMotion]);
 
   return (
     <div className="absolute inset-0">
