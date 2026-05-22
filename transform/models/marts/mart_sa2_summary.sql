@@ -63,7 +63,8 @@ select
     da.agency_name                        as dominant_agency,
     seifa.irsd_score,
     seifa.irsd_decile,
-    erp.erp                               as population
+    erp.erp                               as population,
+    coalesce(transit.stop_count, 0)       as transit_stop_count
 from {{ ref('stg_sa2') }} s
 left join per_sa2 ps on ps.sa2_code = s.sa2_code
 left join dominant_agency da on da.sa2_code = s.sa2_code and da.financial_year = ps.financial_year
@@ -73,3 +74,10 @@ left join (
     from {{ source('atlas', 'population_erp') }}
     order by sa2_code, year desc
 ) erp on erp.sa2_code = s.sa2_code
+left join (
+    select s2.sa2_code, count(ts.stop_id) as stop_count
+    from {{ ref('stg_sa2') }} s2
+    join {{ source('atlas', 'transit_isochrone_30min') }} iso on iso.sa2_code = s2.sa2_code
+    join public.transit_stops ts on st_contains(iso.geom, ts.geom)
+    group by 1
+) transit on transit.sa2_code = s.sa2_code

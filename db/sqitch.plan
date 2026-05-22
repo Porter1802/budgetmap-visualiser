@@ -7,3 +7,4 @@
 0004-derived-spatial [0003-projects] 2026-05-22T09:18:30Z root <root@vm> # project_location_sa2 derived spatial join
 0005-context-layers [0004-derived-spatial] 2026-05-22T09:18:30Z root <root@vm> # context layer tables keyed to sa2
 0006-transit [0005-context-layers] 2026-05-22T09:18:31Z root <root@vm> # GTFS transit routes, stops, isochrones
+0007-transit-routing [0006-transit] 2026-05-22T09:44:34Z root <root@vm> # pgRouting isochrone builder + transit accessibility
