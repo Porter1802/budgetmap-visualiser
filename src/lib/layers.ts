@@ -5,11 +5,19 @@ import {
   BLUE,
   BLUE_K25,
   BLUE_W80,
-  INFO,
+  CAPITAL,
+  CAPITAL_DARK,
+  OTHER,
+  OTHER_DARK,
   rgba,
   type RGB,
 } from "./tokens";
-import type { ProjectFeature, RegionProps, RegionCollection } from "./types";
+import type {
+  ProjectCategory,
+  ProjectFeature,
+  RegionProps,
+  RegionCollection,
+} from "./types";
 
 // Fixed pin radius — points are not sized by spend.
 const DOT_RADIUS = 6;
@@ -17,6 +25,7 @@ const DOT_RADIUS = 6;
 export interface ClusterPoint {
   key: string;
   coords: [number, number];
+  category: ProjectCategory;
   members: ProjectFeature[];
   visible: boolean; // passes the active region filter
 }
@@ -45,10 +54,13 @@ export function clusterPoints(
   for (const f of features) {
     if (f.geometry.type !== "Point") continue;
     const [lon, lat] = f.geometry.coordinates as [number, number];
-    const key = `${lon},${lat}`;
+    const category = f.properties.category;
+    // Key on category too so capital and other pins at one coordinate stay
+    // distinct dots rather than merging into a single ambiguous cluster.
+    const key = `${lon},${lat},${category}`;
     let cell = map.get(key);
     if (!cell) {
-      cell = { key, coords: [lon, lat], members: [], visible: false };
+      cell = { key, coords: [lon, lat], category, members: [], visible: false };
       map.set(key, cell);
     }
     cell.members.push(f);
@@ -124,13 +136,14 @@ export function buildLayers(args: BuildArgs): Layer[] {
       },
       getFillColor: (c) => {
         const active = c.key === hoveredKey;
-        const color: RGB = active ? INFO : BLUE;
+        const color: RGB = c.category === "capital" ? CAPITAL : OTHER;
         return rgba(color, c.visible ? (active ? 0.95 : 0.8) : 0.12);
       },
       getLineColor: (c) => {
         const active =
           c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
-        return rgba(active ? INFO : BLUE_K25, c.visible ? 1 : 0.15);
+        const dark: RGB = c.category === "capital" ? CAPITAL_DARK : OTHER_DARK;
+        return rgba(dark, c.visible ? (active ? 1 : 0.85) : 0.15);
       },
       getLineWidth: 1.5,
       updateTriggers: {

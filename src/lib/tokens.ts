@@ -31,6 +31,20 @@ export const BLUE_W80: RGB = [204, 223, 241];
 export const BLUE_K25: RGB = [5, 75, 143];
 
 export const INFO: RGB = [0, 133, 179];
+export const INFO_DARKER: RGB = [0, 106, 143];
+
+// Category palette: capital works carry the brand blue (the dataset this app
+// foregrounds); other projects use the QGDS info teal. Both are existing
+// palette colours, not a forked scale.
+export const CAPITAL: RGB = BLUE;
+export const CAPITAL_DARK: RGB = BLUE_K25;
+export const OTHER: RGB = INFO;
+export const OTHER_DARK: RGB = INFO_DARKER;
+
+export const CATEGORY_HEX: Record<"capital" | "other", string> = {
+  capital: "#005EB8",
+  other: "#0085B3",
+};
 
 export function rgba(rgb: RGB, alpha: number): RGBA {
   return [rgb[0], rgb[1], rgb[2], Math.round(alpha * 255)];

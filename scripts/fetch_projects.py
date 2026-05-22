@@ -21,6 +21,7 @@ import urllib.request
 from pathlib import Path
 
 API = "https://budgetmap.treasury.qld.gov.au/api/projects"
+BP3_API = "https://budgetmap.treasury.qld.gov.au/api/bp3projects"
 REGIONS_API = "https://budgetmap.treasury.qld.gov.au/api/regions"
 REGIONS_GEOJSON = (
     "https://budgetmapprodstorage.s3-ap-southeast-2.amazonaws.com/prod/data/RDP.geojson"
@@ -107,6 +108,70 @@ def to_feature(project):
             "region_sa4": project.get("regionSA4"),
             "address": project.get("address"),
             "web_link": project.get("webLink"),
+            "category": "other",
+        },
+    }
+
+
+def parse_codes(s):
+    # bp3 carries region codes as a comma-separated string of RDP codes.
+    codes = []
+    for c in (s or "").split(","):
+        c = c.strip()
+        if not c:
+            continue
+        try:
+            codes.append(int(c))
+        except ValueError:
+            continue
+    return sorted(set(codes))
+
+
+def bp3_to_feature(project, idx):
+    # BP3 (Capital Statement) projects differ from /api/projects: geometry lives
+    # in locations[] (project-level lat/long is always null), funding is a single
+    # budgetValue in thousands, and there's no funding split, status, or id. We
+    # emit one Point at the primary location and synthesise a collision-free id.
+    locs = project.get("locations") or []
+    if not locs:
+        return None
+    loc = locs[0]
+    lon = loc.get("longitude")
+    lat = loc.get("latitude")
+    if lon is None or lat is None or not in_qld(lon, lat):
+        return None
+
+    try:
+        budget_k = int(project.get("budgetValue") or 0)
+    except (TypeError, ValueError):
+        budget_k = 0
+
+    agency = project.get("agency") or {}
+    ptype = project.get("type") or {}
+
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [lon, lat]},
+        "properties": {
+            "project_id": 90_000_000 + idx,
+            "name": project.get("name"),
+            "description": project.get("description"),
+            "agency": clean_agency(agency.get("name")),
+            "type": ptype.get("name"),
+            "status": None,
+            "qld_funding": 0,
+            "fed_funding": 0,
+            "local_funding": 0,
+            "own_funding": 0,
+            "private_funding": 0,
+            "total_funding": budget_k * 1000,
+            "region_codes": parse_codes(loc.get("sa4Code") or project.get("sa4Code")),
+            "region_lga": None,
+            "region_sed": None,
+            "region_sa4": None,
+            "address": None,
+            "web_link": project.get("webLink"),
+            "category": "capital",
         },
     }
 
@@ -116,6 +181,15 @@ def main():
 
     raw = fetch_json(API)
     features = [f for f in (to_feature(p) for p in raw) if f is not None]
+
+    # BP3 capital projects, merged into the same feature collection and tagged
+    # category="capital" so the app can style and filter them apart.
+    bp3_raw = fetch_json(BP3_API)
+    bp3_list = bp3_raw.get("projects") if isinstance(bp3_raw, dict) else bp3_raw
+    capital = [
+        f for f in (bp3_to_feature(p, i) for i, p in enumerate(bp3_list or [])) if f is not None
+    ]
+    features.extend(capital)
 
     # Region polygons (RDP_code / Name) — bundled verbatim for the map layer.
     rdp = fetch_json(REGIONS_GEOJSON)
@@ -143,18 +217,24 @@ def main():
     (OUT_DIR / "projects.geojson").write_text(
         json.dumps({"type": "FeatureCollection", "features": features})
     )
+    category_counts = {"capital": 0, "other": 0}
+    for f in features:
+        category_counts[f["properties"]["category"]] += 1
+
     (OUT_DIR / "meta.json").write_text(
         json.dumps(
             {
-                "total_projects": len(raw),
+                "total_projects": len(raw) + len(bp3_list or []),
                 "mapped_projects": len(features),
                 "regions": regions,
+                "categories": category_counts,
                 "total_funding": sum(f["properties"]["total_funding"] for f in features),
             }
         )
     )
     print(
-        f"Wrote {len(features)} mapped features (of {len(raw)} projects), "
+        f"Wrote {len(features)} mapped features "
+        f"({category_counts['other']} other + {category_counts['capital']} capital), "
         f"{len(regions)} regions, {len(rdp['features'])} polygons"
     )
 

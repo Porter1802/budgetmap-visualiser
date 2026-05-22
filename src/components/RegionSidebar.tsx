@@ -1,12 +1,21 @@
 "use client";
 
-import type { RegionMeta } from "@/lib/types";
+import { CATEGORY_HEX } from "@/lib/tokens";
+import type { ProjectCategory, RegionMeta } from "@/lib/types";
 
-// Expandable left-rail list of regions. Clicking a region filters to it and
-// zooms the map to its bounds; "All regions" clears and zooms back out.
+const CATEGORY_LABEL: Record<ProjectCategory, string> = {
+  capital: "Capital works",
+  other: "Other projects",
+};
+
+// Expandable left rail. Top section toggles project categories (capital vs
+// other) with colour-swatch legends; the list below filters/zooms by region.
 export default function RegionSidebar({
   regions,
   selected,
+  categoryCounts,
+  selectedCategories,
+  onToggleCategory,
   open,
   onToggleOpen,
   onFocus,
@@ -14,12 +23,16 @@ export default function RegionSidebar({
 }: {
   regions: RegionMeta[];
   selected: Set<number>;
+  categoryCounts: Record<ProjectCategory, number>;
+  selectedCategories: Set<ProjectCategory>;
+  onToggleCategory: (cat: ProjectCategory) => void;
   open: boolean;
   onToggleOpen: () => void;
   onFocus: (code: number) => void;
   onClear: () => void;
 }) {
   const allActive = selected.size === 0;
+  const cats: ProjectCategory[] = ["capital", "other"];
   return (
     <div className="w-72 overflow-hidden rounded-md border border-qld-light bg-qld-white shadow-card">
       <button
@@ -27,32 +40,65 @@ export default function RegionSidebar({
         aria-expanded={open}
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-qld-info-lighter"
       >
-        <span className="text-sm font-semibold text-qld-darkest">Regions</span>
-        <span className="flex items-center gap-2">
-          <span className="tabnum text-xs text-qld-dark">{regions.length}</span>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            className="transition-transform duration-200"
-            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-            aria-hidden
-          >
-            <path
-              d="M3 5l4 4 4-4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-qld-dark"
-            />
-          </svg>
-        </span>
+        <span className="text-sm font-semibold text-qld-darkest">Filters</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          className="transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          aria-hidden
+        >
+          <path
+            d="M3 5l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-qld-dark"
+          />
+        </svg>
       </button>
 
       {open && (
-        <div className="panel-scroll max-h-[55vh] overflow-y-auto border-t border-qld-light">
+        <div className="panel-scroll max-h-[60vh] overflow-y-auto border-t border-qld-light">
+          <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-qld-dark">
+            Project type
+          </p>
+          {cats.map((cat) => {
+            const active = selectedCategories.has(cat);
+            return (
+              <button
+                key={cat}
+                onClick={() => onToggleCategory(cat)}
+                aria-pressed={active}
+                className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors hover:bg-qld-info-lighter"
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full border"
+                  style={{
+                    background: active ? CATEGORY_HEX[cat] : "transparent",
+                    borderColor: CATEGORY_HEX[cat],
+                  }}
+                  aria-hidden
+                />
+                <span
+                  className={[
+                    "flex-1 truncate",
+                    active ? "text-qld-darkest" : "text-qld-dark line-through",
+                  ].join(" ")}
+                >
+                  {CATEGORY_LABEL[cat]}
+                </span>
+                <span className="tabnum text-xs text-qld-dark">{categoryCounts[cat]}</span>
+              </button>
+            );
+          })}
+
+          <p className="border-t border-qld-light px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-qld-dark">
+            Regions
+          </p>
           <button
             onClick={onClear}
             aria-pressed={allActive}

@@ -9,6 +9,7 @@ import { formatCompact } from "@/lib/format";
 import { allRegionsBounds, regionBounds, type Bounds } from "@/lib/geo";
 import type {
   FeatureCollection,
+  ProjectCategory,
   ProjectFeature,
   ProjectProps,
   RegionCollection,
@@ -33,6 +34,9 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<Set<number>>(new Set());
+  const [categories, setCategories] = useState<Set<ProjectCategory>>(
+    new Set<ProjectCategory>(["capital", "other"])
+  );
   const [members, setMembers] = useState<ProjectProps[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -64,9 +68,14 @@ export default function Page() {
     );
   }, [features, search]);
 
+  const categoryFiltered = useMemo(
+    () => searched.filter((f) => categories.has(f.properties.category)),
+    [searched, categories]
+  );
+
   const shown = useMemo(
-    () => searched.filter((f) => passesRegion(f, selectedRegions)),
-    [searched, selectedRegions]
+    () => categoryFiltered.filter((f) => passesRegion(f, selectedRegions)),
+    [categoryFiltered, selectedRegions]
   );
 
   const totalShown = useMemo(
@@ -88,12 +97,19 @@ export default function Page() {
     if (b) setFocusBounds({ bounds: b, nonce: ++focusNonce.current });
   };
 
+  const toggleCategory = (cat: ProjectCategory) =>
+    setCategories((prev) => {
+      const next = new Set(prev);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
+      return next;
+    });
+
   const selected = members ? members[activeIndex] ?? null : null;
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <MapView
-        features={searched}
+        features={categoryFiltered}
         regions={regions}
         selectedRegions={selectedRegions}
         selectedId={selected?.project_id ?? null}
@@ -128,6 +144,9 @@ export default function Page() {
             <RegionSidebar
               regions={meta.regions}
               selected={selectedRegions}
+              categoryCounts={meta.categories}
+              selectedCategories={categories}
+              onToggleCategory={toggleCategory}
               open={sidebarOpen}
               onToggleOpen={() => setSidebarOpen((o) => !o)}
               onFocus={focusRegion}

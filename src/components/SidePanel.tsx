@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as Plot from "@observablehq/plot";
-import { statusMeta } from "@/lib/tokens";
+import { CATEGORY_HEX, statusMeta } from "@/lib/tokens";
 import { formatCompact, formatFull } from "@/lib/format";
 import type { ProjectProps } from "@/lib/types";
 
@@ -69,8 +69,9 @@ export default function SidePanel({
 
   if (!project) return null;
 
-  const tabColor = "#005EB8";
+  const tabColor = CATEGORY_HEX[project.category];
   const status = statusMeta(project.status);
+  const isCapital = project.category === "capital";
   const segs = SEGMENTS.map((s) => ({
     ...s,
     value: (project[s.key] as number) || 0,
@@ -88,17 +89,25 @@ export default function SidePanel({
             {project.name}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className="rounded-full px-2.5 py-1 text-xs font-medium text-qld-white"
+              style={{ background: tabColor }}
+            >
+              {isCapital ? "Capital works" : "Other project"}
+            </span>
             {project.type && (
               <span className="rounded-full bg-qld-info-lighter px-2.5 py-1 text-xs font-medium text-qld-blue">
                 {project.type}
               </span>
             )}
-            <span
-              className="rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{ background: status.css, color: status.text }}
-            >
-              {status.label}
-            </span>
+            {!isCapital && (
+              <span
+                className="rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{ background: status.css, color: status.text }}
+              >
+                {status.label}
+              </span>
+            )}
           </div>
         </div>
         <button
