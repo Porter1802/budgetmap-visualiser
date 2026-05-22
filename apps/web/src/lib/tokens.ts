@@ -35,31 +35,36 @@ export const BLUE_K25: RGB = [5, 75, 143];
 export const INFO: RGB = [0, 133, 179];
 export const INFO_DARKER: RGB = [0, 106, 143];
 
-// Category palette — locked to the single brand blue. Categories are told
-// apart by shape (facility glyphs vs. budget dots) and label, not colour.
+// Portfolio accent palette (Atlas dark theme, spec §5.1). A deliberately limited
+// set of muted accents — distinguishable on the dark basemap without going
+// neon. Categories now read by colour *and* shape. The stroke is a near-black
+// hairline so pins stay legible where accents overlap bright context.
+export const ACCENT_HEX: Record<ProjectCategory, string> = {
+  capital: "#E0A458", // capital works — amber
+  other: "#4DA6D9", // budget projects — brand-adjacent cyan-blue
+  school: "#5BC0A7", // schools — teal
+  police: "#8C7BE0", // police — indigo
+  hospital: "#E07A8B", // hospitals — rose
+};
+
 export const CATEGORY_FILL: Record<ProjectCategory, RGB> = {
-  capital: BLUE,
-  other: BLUE,
-  school: BLUE,
-  police: BLUE,
-  hospital: BLUE,
+  capital: [224, 164, 88],
+  other: [77, 166, 217],
+  school: [91, 192, 167],
+  police: [140, 123, 224],
+  hospital: [224, 122, 139],
 };
 
+const PIN_STROKE: RGB = [14, 17, 22]; // basemap background — hairline ring
 export const CATEGORY_STROKE: Record<ProjectCategory, RGB> = {
-  capital: BLUE_K25,
-  other: BLUE_K25,
-  school: BLUE_K25,
-  police: BLUE_K25,
-  hospital: BLUE_K25,
+  capital: PIN_STROKE,
+  other: PIN_STROKE,
+  school: PIN_STROKE,
+  police: PIN_STROKE,
+  hospital: PIN_STROKE,
 };
 
-export const CATEGORY_HEX: Record<ProjectCategory, string> = {
-  capital: QLD.blue,
-  other: QLD.blue,
-  school: QLD.blue,
-  police: QLD.blue,
-  hospital: QLD.blue,
-};
+export const CATEGORY_HEX: Record<ProjectCategory, string> = ACCENT_HEX;
 
 export const CATEGORY_LABEL: Record<ProjectCategory, string> = {
   capital: "Capital works",

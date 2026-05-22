@@ -52,7 +52,7 @@ export default function MapView({
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "/style/qgds-light.json",
+      style: "/style/qgds-dark.json",
       center: QLD_CENTER,
       zoom: isMobile ? 3.6 : 4.6,
       minZoom: 3,
