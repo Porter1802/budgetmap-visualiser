@@ -5,6 +5,8 @@
 // strings so the browser does the perceptual mix. The deck.gl WebGL canvas
 // cannot consume CSS colours, so the same mixes are precomputed as RGB arrays.
 
+import type { ProjectCategory } from "./types";
+
 export const QLD = {
   blue: "#005EB8",
   black: "#131212",
@@ -31,6 +33,42 @@ export const BLUE_W80: RGB = [204, 223, 241];
 export const BLUE_K25: RGB = [5, 75, 143];
 
 export const INFO: RGB = [0, 133, 179];
+export const INFO_DARKER: RGB = [0, 106, 143];
+
+// Category palette. Budget datasets stay on QGDS blue/teal; the three facility
+// types add distinct hues with mnemonic intent (gold schools, indigo police,
+// red hospitals). Each has a darker stroke variant for pin definition.
+export const CATEGORY_FILL: Record<ProjectCategory, RGB> = {
+  capital: [0, 94, 184], // #005EB8 brand blue
+  other: [0, 133, 179], // #0085B3 info teal
+  school: [224, 161, 0], // #E0A100 gold
+  police: [91, 75, 158], // #5B4B9E indigo
+  hospital: [215, 38, 61], // #D7263D red
+};
+
+export const CATEGORY_STROKE: Record<ProjectCategory, RGB> = {
+  capital: [5, 75, 143],
+  other: [0, 106, 143],
+  school: [150, 108, 0],
+  police: [62, 50, 110],
+  hospital: [161, 28, 46],
+};
+
+export const CATEGORY_HEX: Record<ProjectCategory, string> = {
+  capital: "#005EB8",
+  other: "#0085B3",
+  school: "#E0A100",
+  police: "#5B4B9E",
+  hospital: "#D7263D",
+};
+
+export const CATEGORY_LABEL: Record<ProjectCategory, string> = {
+  capital: "Capital works",
+  other: "Other projects",
+  school: "Schools",
+  police: "Police stations",
+  hospital: "Hospitals",
+};
 
 export function rgba(rgb: RGB, alpha: number): RGBA {
   return [rgb[0], rgb[1], rgb[2], Math.round(alpha * 255)];

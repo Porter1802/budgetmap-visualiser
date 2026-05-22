@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import SearchBox from "@/components/SearchBox";
-import RegionFilter from "@/components/RegionFilter";
+import RegionSidebar from "@/components/RegionSidebar";
 import SidePanel from "@/components/SidePanel";
 import { formatCompact } from "@/lib/format";
+import { allRegionsBounds, regionBounds, type Bounds } from "@/lib/geo";
 import type {
   FeatureCollection,
+  ProjectCategory,
   ProjectFeature,
   ProjectProps,
   RegionCollection,
@@ -32,9 +34,15 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<Set<number>>(new Set());
+  const [categories, setCategories] = useState<Set<ProjectCategory>>(
+    new Set<ProjectCategory>(["capital", "other"])
+  );
   const [members, setMembers] = useState<ProjectProps[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [focusBounds, setFocusBounds] = useState<{ bounds: Bounds; nonce: number } | null>(null);
+  const focusNonce = useRef(0);
 
   useEffect(() => {
     setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -60,9 +68,14 @@ export default function Page() {
     );
   }, [features, search]);
 
+  const categoryFiltered = useMemo(
+    () => searched.filter((f) => categories.has(f.properties.category)),
+    [searched, categories]
+  );
+
   const shown = useMemo(
-    () => searched.filter((f) => passesRegion(f, selectedRegions)),
-    [searched, selectedRegions]
+    () => categoryFiltered.filter((f) => passesRegion(f, selectedRegions)),
+    [categoryFiltered, selectedRegions]
   );
 
   const totalShown = useMemo(
@@ -70,10 +83,24 @@ export default function Page() {
     [shown]
   );
 
-  const toggleRegion = (code: number) =>
-    setSelectedRegions((prev) => {
+  const focusRegion = (code: number) => {
+    setSelectedRegions(new Set([code]));
+    if (!regions) return;
+    const b = regionBounds(regions, code);
+    if (b) setFocusBounds({ bounds: b, nonce: ++focusNonce.current });
+  };
+
+  const clearRegions = () => {
+    setSelectedRegions(new Set());
+    if (!regions) return;
+    const b = allRegionsBounds(regions);
+    if (b) setFocusBounds({ bounds: b, nonce: ++focusNonce.current });
+  };
+
+  const toggleCategory = (cat: ProjectCategory) =>
+    setCategories((prev) => {
       const next = new Set(prev);
-      next.has(code) ? next.delete(code) : next.add(code);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
       return next;
     });
 
@@ -82,7 +109,7 @@ export default function Page() {
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <MapView
-        features={searched}
+        features={categoryFiltered}
         regions={regions}
         selectedRegions={selectedRegions}
         selectedId={selected?.project_id ?? null}
@@ -91,6 +118,7 @@ export default function Page() {
           setActiveIndex(0);
         }}
         reducedMotion={reducedMotion}
+        focusBounds={focusBounds}
       />
 
       {/* Top-left: title + search */}
@@ -100,32 +128,33 @@ export default function Page() {
           <p className="mt-0.5 text-xs text-qld-dark">
             {meta ? (
               <>
-                <span className="tabnum">{shown.length}</span> projects ·{" "}
-                <span className="tabnum">{formatCompact(totalShown)}</span> shown
+                <span className="tabnum">{shown.length}</span> locations ·{" "}
+                <span className="tabnum">{formatCompact(totalShown)}</span> funding
               </>
             ) : (
-              "Loading capital projects…"
+              "Loading map data…"
             )}
           </p>
         </div>
         <div className="pointer-events-auto">
           <SearchBox value={search} onChange={setSearch} />
         </div>
-      </div>
-
-      {/* Top-center: region filter */}
-      {meta && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden max-w-[52vw] -translate-x-1/2 lg:block">
-          <div className="pointer-events-auto max-h-[40vh] overflow-y-auto rounded-md border border-qld-light bg-qld-white/95 px-3 py-2 shadow-card backdrop-blur-sm">
-            <RegionFilter
+        {meta && (
+          <div className="pointer-events-auto">
+            <RegionSidebar
               regions={meta.regions}
               selected={selectedRegions}
-              onToggle={toggleRegion}
-              onClear={() => setSelectedRegions(new Set())}
+              categoryCounts={meta.categories}
+              selectedCategories={categories}
+              onToggleCategory={toggleCategory}
+              open={sidebarOpen}
+              onToggleOpen={() => setSidebarOpen((o) => !o)}
+              onFocus={focusRegion}
+              onClear={clearRegions}
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <SidePanel
         project={selected}

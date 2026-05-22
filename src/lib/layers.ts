@@ -5,11 +5,16 @@ import {
   BLUE,
   BLUE_K25,
   BLUE_W80,
-  INFO,
+  CATEGORY_FILL,
+  CATEGORY_STROKE,
   rgba,
-  type RGB,
 } from "./tokens";
-import type { ProjectFeature, RegionProps, RegionCollection } from "./types";
+import type {
+  ProjectCategory,
+  ProjectFeature,
+  RegionProps,
+  RegionCollection,
+} from "./types";
 
 // Fixed pin radius — points are not sized by spend.
 const DOT_RADIUS = 6;
@@ -17,6 +22,7 @@ const DOT_RADIUS = 6;
 export interface ClusterPoint {
   key: string;
   coords: [number, number];
+  category: ProjectCategory;
   members: ProjectFeature[];
   visible: boolean; // passes the active region filter
 }
@@ -45,10 +51,13 @@ export function clusterPoints(
   for (const f of features) {
     if (f.geometry.type !== "Point") continue;
     const [lon, lat] = f.geometry.coordinates as [number, number];
-    const key = `${lon},${lat}`;
+    const category = f.properties.category;
+    // Key on category too so capital and other pins at one coordinate stay
+    // distinct dots rather than merging into a single ambiguous cluster.
+    const key = `${lon},${lat},${category}`;
     let cell = map.get(key);
     if (!cell) {
-      cell = { key, coords: [lon, lat], members: [], visible: false };
+      cell = { key, coords: [lon, lat], category, members: [], visible: false };
       map.set(key, cell);
     }
     cell.members.push(f);
@@ -85,15 +94,15 @@ export function buildLayers(args: BuildArgs): Layer[] {
         lineWidthMinPixels: 1,
         getFillColor: (f) => {
           const sel = selectedRegions.has(codeOf(f));
-          if (!hasFilter) return rgba(BLUE_W80, 0.18);
-          return sel ? rgba(BLUE, 0.22) : rgba(BLUE_W80, 0.05);
+          if (!hasFilter) return rgba(BLUE, 0.16);
+          return sel ? rgba(BLUE, 0.42) : rgba(BLUE_W80, 0.08);
         },
         getLineColor: (f) => {
           const sel = selectedRegions.has(codeOf(f));
-          if (!hasFilter) return rgba(BLUE_K25, 0.5);
-          return sel ? rgba(BLUE_K25, 1) : rgba(BLUE_K25, 0.18);
+          if (!hasFilter) return rgba(BLUE_K25, 0.75);
+          return sel ? rgba(BLUE_K25, 1) : rgba(BLUE_K25, 0.28);
         },
-        getLineWidth: (f) => (hasFilter && selectedRegions.has(codeOf(f)) ? 2 : 1),
+        getLineWidth: (f) => (hasFilter && selectedRegions.has(codeOf(f)) ? 2.5 : 1.25),
         updateTriggers: {
           getFillColor: [selectedRegions],
           getLineColor: [selectedRegions],
@@ -124,13 +133,12 @@ export function buildLayers(args: BuildArgs): Layer[] {
       },
       getFillColor: (c) => {
         const active = c.key === hoveredKey;
-        const color: RGB = active ? INFO : BLUE;
-        return rgba(color, c.visible ? (active ? 0.95 : 0.8) : 0.12);
+        return rgba(CATEGORY_FILL[c.category], c.visible ? (active ? 0.95 : 0.8) : 0.12);
       },
       getLineColor: (c) => {
         const active =
           c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
-        return rgba(active ? INFO : BLUE_K25, c.visible ? 1 : 0.15);
+        return rgba(CATEGORY_STROKE[c.category], c.visible ? (active ? 1 : 0.85) : 0.15);
       },
       getLineWidth: 1.5,
       updateTriggers: {

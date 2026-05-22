@@ -1,3 +1,5 @@
+export type ProjectCategory = "capital" | "other" | "school" | "police" | "hospital";
+
 export interface ProjectProps {
   project_id: number;
   name: string | null;
@@ -17,6 +19,7 @@ export interface ProjectProps {
   region_sa4: string | null;
   address: string | null;
   web_link: string | null;
+  category: ProjectCategory;
 }
 
 export interface ProjectFeature {
@@ -57,5 +60,6 @@ export interface Meta {
   total_projects: number;
   mapped_projects: number;
   regions: RegionMeta[];
+  categories: Record<ProjectCategory, number>;
   total_funding: number;
 }
