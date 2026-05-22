@@ -28,6 +28,31 @@ These resolve the outstanding questions and override anything looser below:
 
 ---
 
+## Build status (2026-05-22)
+
+All seven phases scaffolded and committed. Validated against a real PostGIS 3.4 +
+pgRouting 3.6 + H3 4.1 stack (apt-installed in CI; the homelab uses the compose
+`db` service). Martin/MinIO/Authentik/Traefik/Marquez are code-complete but only
+provable on the homelab (no Docker daemon in CI).
+
+| Phase | State | Validated here |
+|-------|-------|----------------|
+| 0 Foundation | done | sqitch deploy+verify of 7 migrations; web build green |
+| 1 Ingest/tiles/map | done | projects ingest live (2056 proj / 1204 loc / 6396 funding); SA2 overlap math proven on synthetic line+polygon; dagster validate; dark theme builds. Martin = homelab |
+| 2 Marts/Soda/API/SA2 | done | dbt build PASS=30; Soda 9/9; FastAPI health+hexbin+project; /sa2 builds |
+| 3 Context layers | done | schools loader 1774 rows from data.qld; context assets validate. ABS/QPS feeds = homelab |
+| 4 Transit | done | pgr_drivingDistance proven; migration 0007 deploy+verify; GTFS loader written; mart transit score. Full isochrones need GTFS = homelab |
+| 5 Risk/3D | done | flood exposure + canopy mart columns build; risk assets validate. 3D extrude = frontend follow-up |
+| 6 Lakehouse | done | GeoParquet export + DuckDB roundtrip; H3 benchmark (666 hexes both engines; PostGIS 30ms vs DuckDB 572ms); /analytics endpoint |
+| 7 Polish/auth | done | /compare + /sa2 build; Traefik+Authentik config; Marquez wired. Auth round-trip = homelab |
+
+Loose ends deferred by design: SA2/LGA/electorate boundaries need the ABS
+download (loaders ready, `SA2_GEOJSON` env), which lights up `mart_sa2_summary`,
+the SA2 page, and choropleths; historical packages (decision #2); 3D extrusion
+and choropleth toggles on `/atlas`; the GTFS-realtime `TripsLayer` stretch.
+
+---
+
 ## 0. The one thing that changes everything: the data gap
 
 The v0.2 spec was written against the **internal Treasury / Databricks schema**.
