@@ -1,17 +1,18 @@
 "use client";
 
-// Agency multi-select. Active chip: solid blue, white text. Inactive: white
-// with a blue hairline + blue text; hover fills info-lighter. "All" clears.
+import type { RegionMeta } from "@/lib/types";
 
-export default function FilterChips({
-  agencies,
+// Region multi-select. Active chip: solid blue, white text. Inactive: white
+// with a blue hairline + blue text; hover fills info-lighter. "All" clears.
+export default function RegionFilter({
+  regions,
   selected,
   onToggle,
   onClear,
 }: {
-  agencies: { name: string; count: number }[];
-  selected: Set<string>;
-  onToggle: (name: string) => void;
+  regions: RegionMeta[];
+  selected: Set<number>;
+  onToggle: (code: number) => void;
   onClear: () => void;
 }) {
   const allActive = selected.size === 0;
@@ -27,16 +28,16 @@ export default function FilterChips({
             : "border border-qld-blue bg-qld-white text-qld-blue hover:bg-qld-info-lighter",
         ].join(" ")}
       >
-        All
+        All regions
       </button>
-      {agencies.map((a) => {
-        const active = selected.has(a.name);
+      {regions.map((r) => {
+        const active = selected.has(r.code);
         return (
           <button
-            key={a.name}
-            onClick={() => onToggle(a.name)}
+            key={r.code}
+            onClick={() => onToggle(r.code)}
             aria-pressed={active}
-            title={`${a.name} · ${a.count}`}
+            title={`${r.name} · ${r.count}`}
             className={[
               "rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200",
               active
@@ -44,14 +45,10 @@ export default function FilterChips({
                 : "border border-qld-blue bg-qld-white text-qld-blue hover:bg-qld-info-lighter",
             ].join(" ")}
           >
-            {shorten(a.name)} <span className="tabnum opacity-70">{a.count}</span>
+            {r.name} <span className="tabnum opacity-70">{r.count}</span>
           </button>
         );
       })}
     </div>
   );
-}
-
-function shorten(name: string): string {
-  return name.replace(/^Department of (the )?/i, "").replace(/^Queensland /i, "");
 }

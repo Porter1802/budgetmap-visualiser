@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { buildLayers } from "@/lib/layers";
+import { buildLayers, type ClusterPoint } from "@/lib/layers";
 import { formatCompact } from "@/lib/format";
-import type { ProjectFeature, ProjectProps, MapMode } from "@/lib/types";
+import type { ProjectFeature, ProjectProps, RegionCollection } from "@/lib/types";
 
 const QLD_CENTER: [number, number] = [146.5, -20.5];
 const HOVER_DELAY = 80;
@@ -16,28 +16,29 @@ interface HoverInfo {
   y: number;
   name: string;
   funding: number;
+  count: number;
 }
 
 export default function MapView({
   features,
-  mode,
-  visibleAgencies,
+  regions,
+  selectedRegions,
   selectedId,
   onSelect,
   reducedMotion,
 }: {
   features: ProjectFeature[];
-  mode: MapMode;
-  visibleAgencies: Set<string> | null;
+  regions: RegionCollection | null;
+  selectedRegions: Set<number>;
   selectedId: number | null;
-  onSelect: (p: ProjectProps, coords: [number, number]) => void;
+  onSelect: (members: ProjectProps[], coords: [number, number]) => void;
   reducedMotion: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const [hover, setHover] = useState<HoverInfo | null>(null);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -53,9 +54,9 @@ export default function MapView({
       zoom: isMobile ? 3.6 : 4.6,
       minZoom: 3,
       maxZoom: 16,
-      pitch: isMobile ? 0 : 0,
+      pitch: 0,
       attributionControl: { compact: true },
-      dragRotate: !isMobile, // rotation off on mobile, pitch allowed on desktop
+      dragRotate: !isMobile,
       pitchWithRotate: !isMobile,
     });
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
@@ -82,10 +83,10 @@ export default function MapView({
 
     const layers = buildLayers({
       features,
-      mode,
-      hoveredId,
+      regions,
+      selectedRegions,
+      hoveredKey,
       selectedId,
-      visibleAgencies,
       reducedMotion,
     });
 
@@ -94,37 +95,41 @@ export default function MapView({
       getCursor: ({ isDragging, isHovering }) =>
         isDragging ? "grabbing" : isHovering ? "pointer" : "grab",
       onHover: (info: { object?: unknown; x: number; y: number }) => {
-        const obj = info.object as ProjectFeature | undefined;
+        const obj = info.object as ClusterPoint | undefined;
         if (hoverTimer.current) clearTimeout(hoverTimer.current);
-        if (!obj || !obj.properties) {
+        if (!obj || !obj.members) {
           setHover(null);
-          setHoveredId(null);
+          setHoveredKey(null);
           return;
         }
-        setHoveredId(obj.properties.project_id);
+        setHoveredKey(obj.key);
         hoverTimer.current = setTimeout(() => {
+          const funding = obj.members.reduce((s, m) => s + m.properties.total_funding, 0);
           setHover({
             x: info.x,
             y: info.y,
-            name: obj.properties.name || "Untitled project",
-            funding: obj.properties.total_funding,
+            name: obj.members[0].properties.name || "Untitled project",
+            funding,
+            count: obj.members.length,
           });
         }, HOVER_DELAY);
       },
       onClick: (info: { object?: unknown }) => {
-        const obj = info.object as ProjectFeature | undefined;
-        if (!obj || !obj.properties || obj.geometry.type !== "Point") return;
-        const coords = obj.geometry.coordinates as [number, number];
+        const obj = info.object as ClusterPoint | undefined;
+        if (!obj || !obj.members) return;
         mapRef.current?.flyTo({
-          center: coords,
+          center: obj.coords,
           zoom: Math.max(mapRef.current.getZoom(), 8),
           duration: reducedMotion ? 0 : 1200,
           essential: true,
         });
-        onSelect(obj.properties, coords);
+        onSelect(
+          obj.members.map((m) => m.properties),
+          obj.coords
+        );
       },
     });
-  }, [features, mode, hoveredId, selectedId, visibleAgencies, reducedMotion, ready]);
+  }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, ready]);
 
   return (
     <div className="absolute inset-0">
@@ -134,7 +139,9 @@ export default function MapView({
           className="pointer-events-none absolute z-30 max-w-[240px] rounded-md border border-qld-light bg-qld-white px-3 py-2 shadow-card"
           style={{ left: hover.x + 12, top: hover.y + 12 }}
         >
-          <p className="text-sm font-semibold leading-snug text-qld-darkest">{hover.name}</p>
+          <p className="text-sm font-semibold leading-snug text-qld-darkest">
+            {hover.count > 1 ? `${hover.count} projects here` : hover.name}
+          </p>
           <p className="mt-0.5 font-mono text-xs tabnum text-qld-blue">
             {formatCompact(hover.funding)}
           </p>

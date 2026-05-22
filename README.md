@@ -7,7 +7,7 @@ QGDS-aligned MapLibre + deck.gl map. No database, no backend.
 ## Run it
 
 ```bash
-# 1. Pull data (writes public/data/projects.geojson + meta.json)
+# 1. Pull data (writes public/data/projects.geojson + meta.json + regions.geojson)
 python3 scripts/fetch_projects.py
 
 # 2. Install + dev
@@ -47,16 +47,19 @@ the ingest script (`scripts/fetch_projects.py`) is written against reality:
 | `webLink` populated | Always empty — footer link falls back to the official site |
 | CORS `*` | No `Access-Control-Allow-Origin` → static-file approach is correct |
 
-Because the data is points-only, the line/polygon deck.gl layers exist for
-forward-compatibility but render nothing today.
+Region context comes from two extra sources, also bundled to static files:
+the RDP region polygons (`budgetmapprodstorage.s3…/prod/data/RDP.geojson`,
+joined by `RDP_code`) and region metadata (`/api/regions`). Each project's
+`regions[].code` links it to the polygons, which drives the region filter.
 
 ## Stack
 
 - **Next.js 15** (App Router, static export) + **Tailwind**
 - **MapLibre GL** basemap — custom QGDS-palette style (`public/style/qgds-light.json`)
   recolouring Carto's free OpenMapTiles vector tiles
-- **deck.gl** (`MapboxOverlay`, interleaved) — Scatterplot for points, hexbin
-  via `PolygonLayer` + h3-js (avoids the heavy `@deck.gl/geo-layers` chain)
+- **deck.gl** (`MapboxOverlay`, interleaved) — `GeoJsonLayer` for the blue
+  region polygons, `ScatterplotLayer` for fixed-size pins, `TextLayer` for the
+  count badge on coincident pins
 - **Observable Plot** — funding breakdown bar, themed to blue tints
 - **Noto Sans + IBM Plex Mono**, self-hosted via `next/font`
 
@@ -64,7 +67,7 @@ forward-compatibility but render nothing today.
 
 One source of truth for the palette: `src/lib/tokens.ts` (canvas RGB) mirrored
 by CSS `color-mix(in oklch, …)` for DOM surfaces. QGDS ships a single brand
-blue; every tint/shade is that blue mixed with white or near-black. Maroon and
-error-red are excluded as decorative colours. Three modes: **Blue** (single
-hue), **By agency** (controlled on-brand buckets), **Heatmap** (H3 hexbin, blue
-sequential ramp, 3D extrusion by funding).
+blue; every tint/shade is that blue mixed with white or near-black. The map is
+a single blue view: translucent region polygons under fixed-size project pins.
+A region filter (top-centre, fed by the regions API) narrows the pins to the
+selected RDP region(s), highlights that region's outline, and fades the rest.

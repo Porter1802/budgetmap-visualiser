@@ -11,6 +11,7 @@ export interface ProjectProps {
   own_funding: number;
   private_funding: number;
   total_funding: number;
+  region_codes: number[];
   region_lga: string | null;
   region_sed: string | null;
   region_sa4: string | null;
@@ -29,11 +30,32 @@ export interface FeatureCollection {
   features: ProjectFeature[];
 }
 
-export type MapMode = "blue" | "agency" | "hexbin";
+export interface RegionProps {
+  RDP_code: number;
+  Name: string;
+}
+
+export interface RegionFeature {
+  type: "Feature";
+  id?: number;
+  geometry: { type: string; coordinates: unknown };
+  properties: RegionProps;
+}
+
+export interface RegionCollection {
+  type: "FeatureCollection";
+  features: RegionFeature[];
+}
+
+export interface RegionMeta {
+  code: number;
+  name: string;
+  count: number;
+}
 
 export interface Meta {
   total_projects: number;
   mapped_projects: number;
-  agencies: { name: string; count: number }[];
+  regions: RegionMeta[];
   total_funding: number;
 }
