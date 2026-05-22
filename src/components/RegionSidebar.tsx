@@ -1,6 +1,7 @@
 "use client";
 
-import { CATEGORY_HEX, CATEGORY_LABEL } from "@/lib/tokens";
+import { CATEGORY_HEX, CATEGORY_LABEL, QLD } from "@/lib/tokens";
+import { CATEGORY_PATH, isFacility } from "@/lib/icons";
 import type { ProjectCategory, RegionMeta } from "@/lib/types";
 
 // Fixed display order; only categories present in the data are shown.
@@ -73,14 +74,26 @@ export default function RegionSidebar({
                 aria-pressed={active}
                 className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors hover:bg-qld-info-lighter"
               >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full border"
-                  style={{
-                    background: active ? CATEGORY_HEX[cat] : "transparent",
-                    borderColor: CATEGORY_HEX[cat],
-                  }}
-                  aria-hidden
-                />
+                {isFacility(cat) ? (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    className="shrink-0"
+                    aria-hidden
+                  >
+                    <path d={CATEGORY_PATH[cat]} fill={active ? CATEGORY_HEX[cat] : QLD.dark} />
+                  </svg>
+                ) : (
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full border"
+                    style={{
+                      background: active ? CATEGORY_HEX[cat] : "transparent",
+                      borderColor: CATEGORY_HEX[cat],
+                    }}
+                    aria-hidden
+                  />
+                )}
                 <span
                   className={[
                     "flex-1 truncate",

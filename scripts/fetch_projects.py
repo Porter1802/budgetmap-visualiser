@@ -335,6 +335,9 @@ def school_feature(rec, idx, region_index):
     coord = to_coord(rec)
     if not coord or not in_qld(*coord):
         return None
+    # Only state (government) schools are mapped.
+    if (rec.get("Sector") or "").strip().lower() != "state":
+        return None
     lon, lat = coord
     low, high = rec.get("Official Low Year Level"), rec.get("Official High Year Level")
     bits = []
