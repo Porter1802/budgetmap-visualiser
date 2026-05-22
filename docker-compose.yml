@@ -1,0 +1,9 @@
+# Portainer-friendly stack. Deploy via Portainer → Stacks → paste/Git this file.
+services:
+  qld-budget-map:
+    build: .
+    image: qld-budget-map:latest
+    container_name: qld-budget-map
+    restart: unless-stopped
+    ports:
+      - "8080:80"

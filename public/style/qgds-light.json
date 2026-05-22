@@ -1,0 +1,105 @@
+{
+  "version": 8,
+  "name": "QGDS Light",
+  "metadata": { "note": "QGDS-palette basemap over Carto's free OpenMapTiles vector tiles." },
+  "glyphs": "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",
+  "sources": {
+    "carto": {
+      "type": "vector",
+      "url": "https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#F5F5F5" }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landcover",
+      "paint": { "fill-color": "#FFFFFF", "fill-opacity": 0.6 }
+    },
+    {
+      "id": "landuse",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "paint": { "fill-color": "#FFFFFF", "fill-opacity": 0.5 }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "park",
+      "paint": { "fill-color": "#EFF4F9", "fill-opacity": 0.6 }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "water",
+      "paint": { "fill-color": "#E5EEF5" }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "waterway",
+      "paint": { "line-color": "#E5EEF5", "line-width": 1 }
+    },
+    {
+      "id": "roads",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "paint": {
+        "line-color": "#E0E0E0",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          6, 0.4,
+          10, 0.8,
+          14, 1.6,
+          18, 4
+        ],
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 11, 0.9]
+      }
+    },
+    {
+      "id": "boundary-admin",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "boundary",
+      "filter": ["<=", ["get", "admin_level"], 4],
+      "paint": {
+        "line-color": "#E0E0E0",
+        "line-dasharray": [3, 2],
+        "line-opacity": 0.5,
+        "line-width": 1
+      }
+    },
+    {
+      "id": "place-labels",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "minzoom": 4,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11, 12, 16],
+        "text-letter-spacing": 0.05,
+        "text-max-width": 8
+      },
+      "paint": {
+        "text-color": "#444444",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.4
+      }
+    }
+  ]
+}
