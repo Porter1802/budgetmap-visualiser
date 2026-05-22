@@ -1,0 +1,43 @@
+# Martin vector-tile server config. Serves MVT straight from PostGIS.
+# atlas-tiles.porterble.com -> this (Authentik or token; see infra/).
+listen_addresses: "0.0.0.0:3000"
+
+postgres:
+  connection_string: ${DATABASE_URL}
+  # Auto-publish geometry tables/functions, but pin the ones the frontend uses
+  # so tile URLs are stable.
+  tables:
+    sa2:
+      schema: public
+      table: sa2
+      srid: 4326
+      geometry_column: geom
+      id_column: sa2_code
+      properties:
+        sa2_code: text
+        sa2_name: text
+        sa4_name: text
+    rdp_region:
+      schema: public
+      table: rdp_region
+      srid: 4326
+      geometry_column: geom
+      id_column: rdp_code
+      properties:
+        rdp_code: int4
+        rdp_name: text
+    project_pins:
+      schema: public
+      table: project_locations
+      srid: 4326
+      geometry_column: geom
+      id_column: location_id
+      properties:
+        location_id: int8
+        project_id: int4
+
+  # Choropleth/aggregate sources come from mart-backed SQL functions (Phase 3).
+  functions:
+    mart_sa2_choropleth:
+      schema: public
+      function: mart_sa2_choropleth

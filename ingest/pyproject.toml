@@ -1,0 +1,25 @@
+[project]
+name = "atlas-ingest"
+version = "0.4.0"
+description = "Dagster ingest assets for the QLD Capital Investment Atlas"
+requires-python = ">=3.11"
+dependencies = [
+    "dagster>=1.7",
+    "dagster-webserver>=1.7",
+    "openlineage-python>=1.9",
+    "psycopg[binary]>=3.1",
+    "requests>=2.31",
+    "shapely>=2.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+atlas-ingest = "atlas_ingest.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["atlas_ingest*"]
+
+[tool.dagster]
+module_name = "atlas_ingest.definitions"
+code_location_name = "atlas_ingest"
