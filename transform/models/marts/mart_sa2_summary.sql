@@ -64,7 +64,9 @@ select
     seifa.irsd_score,
     seifa.irsd_decile,
     erp.erp                               as population,
-    coalesce(transit.stop_count, 0)       as transit_stop_count
+    coalesce(transit.stop_count, 0)       as transit_stop_count,
+    coalesce(flood.exposure_pct, 0)       as flood_exposure_pct,
+    canopy.canopy_pct
 from {{ ref('stg_sa2') }} s
 left join per_sa2 ps on ps.sa2_code = s.sa2_code
 left join dominant_agency da on da.sa2_code = s.sa2_code and da.financial_year = ps.financial_year
@@ -81,3 +83,12 @@ left join (
     join public.transit_stops ts on st_contains(iso.geom, ts.geom)
     group by 1
 ) transit on transit.sa2_code = s.sa2_code
+left join (
+    select s2.sa2_code,
+           least(1.0, sum(st_area(st_intersection(s2.geom, fe.geom)::geography))
+                      / nullif(max(st_area(s2.geom::geography)), 0)) as exposure_pct
+    from {{ ref('stg_sa2') }} s2
+    join {{ source('atlas', 'flood_extents') }} fe on st_intersects(s2.geom, fe.geom)
+    group by 1
+) flood on flood.sa2_code = s.sa2_code
+left join {{ source('atlas', 'tree_canopy_sa2') }} canopy on canopy.sa2_code = s.sa2_code

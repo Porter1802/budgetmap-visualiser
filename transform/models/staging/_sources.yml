@@ -18,4 +18,6 @@ sources:
       - name: crime_offences
       - name: rental_bonds
       - name: tree_canopy_sa2
+      - name: flood_extents
       - name: transit_isochrone_30min
+      - name: transit_stops
