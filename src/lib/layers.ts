@@ -1,5 +1,5 @@
 import type { Layer } from "@deck.gl/core";
-import { ScatterplotLayer, TextLayer, GeoJsonLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, TextLayer, GeoJsonLayer, IconLayer } from "@deck.gl/layers";
 import type { Feature } from "geojson";
 import {
   BLUE,
@@ -9,6 +9,7 @@ import {
   CATEGORY_STROKE,
   rgba,
 } from "./tokens";
+import { FACILITY_ICONS, isFacility } from "./icons";
 import type {
   ProjectCategory,
   ProjectFeature,
@@ -18,6 +19,8 @@ import type {
 
 // Fixed pin radius — points are not sized by spend.
 const DOT_RADIUS = 6;
+// Facility glyphs read best a touch larger than the budget dots.
+const ICON_SIZE = 22;
 
 export interface ClusterPoint {
   key: string;
@@ -72,6 +75,7 @@ const TRANSITION = (reduced: boolean) =>
     : {
         getFillColor: { duration: 400, easing: (t: number) => t },
         getLineColor: { duration: 400, easing: (t: number) => t },
+        getColor: { duration: 400, easing: (t: number) => t },
       };
 
 export function buildLayers(args: BuildArgs): Layer[] {
@@ -114,12 +118,17 @@ export function buildLayers(args: BuildArgs): Layer[] {
   }
 
   const clusters = clusterPoints(args.features, selectedRegions);
+  const dots = clusters.filter((c) => !isFacility(c.category));
+  const facilities = clusters.filter((c) => isFacility(c.category));
 
-  // ── Project pins (blue, fixed size) ────────────────────────────────────────
+  const isActive = (c: ClusterPoint) =>
+    c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
+
+  // ── Budget pins (blue dots, fixed size) ─────────────────────────────────────
   layers.push(
     new ScatterplotLayer<ClusterPoint>({
       id: "points",
-      data: clusters,
+      data: dots,
       pickable: true,
       stroked: true,
       filled: true,
@@ -127,24 +136,42 @@ export function buildLayers(args: BuildArgs): Layer[] {
       lineWidthUnits: "pixels",
       getPosition: (c) => c.coords,
       getRadius: (c) => {
-        const active = c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
         const base = c.members.length > 1 ? DOT_RADIUS + 3 : DOT_RADIUS;
-        return active ? base * 1.25 : base;
+        return isActive(c) ? base * 1.25 : base;
       },
       getFillColor: (c) => {
         const active = c.key === hoveredKey;
         return rgba(CATEGORY_FILL[c.category], c.visible ? (active ? 0.95 : 0.8) : 0.12);
       },
-      getLineColor: (c) => {
-        const active =
-          c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
-        return rgba(CATEGORY_STROKE[c.category], c.visible ? (active ? 1 : 0.85) : 0.15);
-      },
+      getLineColor: (c) =>
+        rgba(CATEGORY_STROKE[c.category], c.visible ? (isActive(c) ? 1 : 0.85) : 0.15),
       getLineWidth: 1.5,
       updateTriggers: {
         getFillColor: [hoveredKey, selectedRegions],
         getLineColor: [hoveredKey, selectedId, selectedRegions],
         getRadius: [hoveredKey, selectedId],
+      },
+      transitions: TRANSITION(reducedMotion) as object | undefined,
+    })
+  );
+
+  // ── Facility pins (thematic blue glyphs: schools, police, hospitals) ────────
+  layers.push(
+    new IconLayer<ClusterPoint>({
+      id: "facilities",
+      data: facilities,
+      pickable: true,
+      getPosition: (c) => c.coords,
+      getIcon: (c) => FACILITY_ICONS[c.category as "school" | "police" | "hospital"],
+      sizeUnits: "pixels",
+      getSize: (c) => (isActive(c) ? ICON_SIZE * 1.25 : ICON_SIZE),
+      getColor: (c) => {
+        const active = c.key === hoveredKey;
+        return rgba(BLUE, c.visible ? (active ? 1 : 0.9) : 0.18);
+      },
+      updateTriggers: {
+        getColor: [hoveredKey, selectedRegions],
+        getSize: [hoveredKey, selectedId],
       },
       transitions: TRANSITION(reducedMotion) as object | undefined,
     })

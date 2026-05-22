@@ -35,31 +35,30 @@ export const BLUE_K25: RGB = [5, 75, 143];
 export const INFO: RGB = [0, 133, 179];
 export const INFO_DARKER: RGB = [0, 106, 143];
 
-// Category palette. Budget datasets stay on QGDS blue/teal; the three facility
-// types add distinct hues with mnemonic intent (gold schools, indigo police,
-// red hospitals). Each has a darker stroke variant for pin definition.
+// Category palette — locked to the single brand blue. Categories are told
+// apart by shape (facility glyphs vs. budget dots) and label, not colour.
 export const CATEGORY_FILL: Record<ProjectCategory, RGB> = {
-  capital: [0, 94, 184], // #005EB8 brand blue
-  other: [0, 133, 179], // #0085B3 info teal
-  school: [224, 161, 0], // #E0A100 gold
-  police: [91, 75, 158], // #5B4B9E indigo
-  hospital: [215, 38, 61], // #D7263D red
+  capital: BLUE,
+  other: BLUE,
+  school: BLUE,
+  police: BLUE,
+  hospital: BLUE,
 };
 
 export const CATEGORY_STROKE: Record<ProjectCategory, RGB> = {
-  capital: [5, 75, 143],
-  other: [0, 106, 143],
-  school: [150, 108, 0],
-  police: [62, 50, 110],
-  hospital: [161, 28, 46],
+  capital: BLUE_K25,
+  other: BLUE_K25,
+  school: BLUE_K25,
+  police: BLUE_K25,
+  hospital: BLUE_K25,
 };
 
 export const CATEGORY_HEX: Record<ProjectCategory, string> = {
-  capital: "#005EB8",
-  other: "#0085B3",
-  school: "#E0A100",
-  police: "#5B4B9E",
-  hospital: "#D7263D",
+  capital: QLD.blue,
+  other: QLD.blue,
+  school: QLD.blue,
+  police: QLD.blue,
+  hospital: QLD.blue,
 };
 
 export const CATEGORY_LABEL: Record<ProjectCategory, string> = {

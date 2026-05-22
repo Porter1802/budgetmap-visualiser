@@ -35,7 +35,7 @@ export default function Page() {
   const [search, setSearch] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<Set<number>>(new Set());
   const [categories, setCategories] = useState<Set<ProjectCategory>>(
-    new Set<ProjectCategory>(["capital", "other"])
+    new Set<ProjectCategory>(["capital", "other", "school", "police", "hospital"])
   );
   const [members, setMembers] = useState<ProjectProps[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
