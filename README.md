@@ -1,73 +1,65 @@
-# QLD Budget Map — POC (v0.3)
+# QLD Capital Investment Atlas
 
-The prettiest map of Queensland capital projects we can show on a laptop, built
-to look like it belongs to qld.gov.au. Public API → static files → a
-QGDS-aligned MapLibre + deck.gl map. No database, no backend.
+Internal, self-hosted atlas of Queensland capital investment with the
+surrounding context (demographics, risk, access, services), built primarily to
+learn the modern geospatial data stack. SA2 is the primary analytical unit.
 
-## Run it
+> **Status:** migrating from the static v0.3 POC to the full platform described
+> in [`docs/spec-v0.2.md`](docs/spec-v0.2.md). The build is sequenced in
+> [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
-```bash
-# 1. Pull data (writes public/data/projects.geojson + meta.json + regions.geojson)
-python3 scripts/fetch_projects.py
+## Layout (monorepo)
 
-# 2. Install + dev
-npm install
-npm run dev          # http://localhost:3000
-
-# 3. Static build (writes ./out)
-npm run build
+```
+apps/web/      Next.js 15 + MapLibre + deck.gl frontend (the POC lives here)
+apps/api/      FastAPI (mart reads, search, ad-hoc DuckDB queries)
+ingest/        Dagster project — ingest assets, OpenLineage
+transform/     dbt-core project — staging models + marts
+db/            PostGIS schema as sqitch migrations
+quality/       Soda Core data-quality checks
+tiles/         Martin config + PMTiles export
+infra/         compose overrides, Traefik labels, Authentik notes
+docs/          spec + implementation plan
 ```
 
-## Deploy (Docker / Portainer)
-
-The app is a fully static export served by nginx.
+## Quick start (local, existing Postgres)
 
 ```bash
-docker compose up -d --build   # serves on :8080
+cp .env.example .env          # adjust connection if needed
+make migrate                  # sqitch deploy: PostGIS schema
+make verify                   # sqitch verify
+make ingest                   # pull public API -> projects/locations/funding
+make dbt                      # build marts
+make web-dev                  # http://localhost:3000
 ```
 
-In Portainer: **Stacks → Add stack**, point it at this repo's
-`docker-compose.yml` (or paste it). The committed `public/data/*` is baked into
-the image at build time; re-run the ingest script and rebuild to refresh.
+`make migrate`/`verify`/`ingest`/`dbt` need PostgreSQL 16 + PostGIS 3.4 with the
+`pgrouting`, `h3`, and `h3_postgis` extensions. Locally that's an apt-installed
+server; on the homelab it's the `db` service in `docker-compose.yml`.
 
-## What the public API actually returns
+## Full stack (homelab)
 
-The spec assumed the internal Databricks schema. The public payload differs —
-the ingest script (`scripts/fetch_projects.py`) is written against reality:
+```bash
+make up                                   # core: db + martin + api + web
+docker compose --profile analytics up -d  # + dagster
+docker compose --profile lakehouse up -d  # + minio
+docker compose --profile lineage up -d    # + marquez
+```
 
-| Spec assumption | Reality (verified 2026-05) |
-|---|---|
-| Top-level array | Confirmed (1085 projects, no `{data:…}` envelope) |
-| `locations[]` with WKT geometry | No `locations`, no WKT anywhere. Geometry is project-level `latitude`/`longitude` only |
-| Points, lines, polygons | Points only (640 of 1085 have coords, all in the QLD bbox) |
-| `impactRadius` | Not present — impact rings dropped |
-| `projectFunding.totalQldFunding` (camelCase) | Confirmed; 690 projects funded, up to $9b |
-| `agency.name`, `type.name` | Both present (28 mapped agencies — all carry an "(Archived)" suffix we strip; 4 types) |
-| `status` string | Integer; the published package exposes only `2`. Status meta is inferred |
-| `webLink` populated | Always empty — footer link falls back to the official site |
-| CORS `*` | No `Access-Control-Allow-Origin` → static-file approach is correct |
+Behind Traefik forward-auth (Authentik) on porterble.com — see `infra/`.
 
-Region context comes from two extra sources, also bundled to static files:
-the RDP region polygons (`budgetmapprodstorage.s3…/prod/data/RDP.geojson`,
-joined by `RDP_code`) and region metadata (`/api/regions`). Each project's
-`regions[].code` links it to the polygons, which drives the region filter.
+## Data reality
+
+The v0.2 spec assumed the internal Treasury schema; the public API is thinner
+(points only today, no WKT, RDP/SA4/SED/LGA not SA2). The schema is built
+*WKT-shaped* anyway because lines/polygons are expected in `/api/projects`
+around June 2026 — see the reconciliation table in the implementation plan. SA2
+is derived from `project_locations.geom` via the spatial join in
+`db/deploy/0004-derived-spatial.sql`.
 
 ## Stack
 
-- **Next.js 15** (App Router, static export) + **Tailwind**
-- **MapLibre GL** basemap — custom QGDS-palette style (`public/style/qgds-light.json`)
-  recolouring Carto's free OpenMapTiles vector tiles
-- **deck.gl** (`MapboxOverlay`, interleaved) — `GeoJsonLayer` for the blue
-  region polygons, `ScatterplotLayer` for fixed-size pins, `TextLayer` for the
-  count badge on coincident pins
-- **Observable Plot** — funding breakdown bar, themed to blue tints
-- **Noto Sans + IBM Plex Mono**, self-hosted via `next/font`
-
-## Design
-
-One source of truth for the palette: `src/lib/tokens.ts` (canvas RGB) mirrored
-by CSS `color-mix(in oklch, …)` for DOM surfaces. QGDS ships a single brand
-blue; every tint/shade is that blue mixed with white or near-black. The map is
-a single blue view: translucent region polygons under fixed-size project pins.
-A region filter (top-centre, fed by the regions API) narrows the pins to the
-selected RDP region(s), highlights that region's outline, and fades the rest.
+Postgres 16 + PostGIS 3.4 · pgRouting · H3 · Dagster · dbt-core · Soda Core ·
+Martin + PMTiles · DuckDB + GeoParquet on MinIO · FastAPI · Next.js 15 +
+MapLibre GL + deck.gl · Observable Plot · Nominatim · OpenLineage → Marquez ·
+Authentik forward-auth via Traefik.

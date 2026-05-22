@@ -1,0 +1,9 @@
+%syntax-version=1.0.0
+%project=atlas
+
+0001-extensions 2026-05-22T09:18:28Z root <root@vm> # Enable PostGIS, pgRouting, and H3 extensions
+0002-reference-geographies [0001-extensions] 2026-05-22T09:18:29Z root <root@vm> # ABS ASGS + LGA + electorate + RDP reference geographies
+0003-projects [0002-reference-geographies] 2026-05-22T09:18:29Z root <root@vm> # projects, project_locations, project_funding (WKT-shaped)
+0004-derived-spatial [0003-projects] 2026-05-22T09:18:30Z root <root@vm> # project_location_sa2 derived spatial join
+0005-context-layers [0004-derived-spatial] 2026-05-22T09:18:30Z root <root@vm> # context layer tables keyed to sa2
+0006-transit [0005-context-layers] 2026-05-22T09:18:31Z root <root@vm> # GTFS transit routes, stops, isochrones

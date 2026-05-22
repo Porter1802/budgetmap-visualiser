@@ -1,11 +1,122 @@
-# Portainer-friendly stack. Deploy via Portainer → Stacks → paste/Git this file.
+# QLD Capital Investment Atlas — full platform stack (homelab target).
+#
+# Profiles let you bring up subsets. The data spine (db) plus tiles/api/web are
+# the `core` profile; analytics (dagster, dbt) and the lakehouse (minio) and
+# lineage (marquez) sit behind their own profiles so a laptop can run just the
+# app. On porterble.com these sit behind Traefik + Authentik (see infra/).
 services:
-  qld-budget-map:
-    build: .
-    image: qld-budget-map:latest
-    container_name: qld-budget-map
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: atlas-db
     restart: unless-stopped
-    # Host port is configurable; defaults to 8080. Override with HOST_PORT
-    # (e.g. set HOST_PORT=8090 in Portainer's stack env vars).
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-atlas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas}
+      POSTGRES_DB: ${POSTGRES_DB:-atlas}
+    volumes:
+      - atlas-db-data:/var/lib/postgresql/data
+      - ./db/docker-initdb.sh:/docker-entrypoint-initdb.d/10-extensions.sh:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atlas} -d ${POSTGRES_DB:-atlas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Vector tiles straight from PostGIS. Not installable in the CI sandbox (Rust
+  # binary, image pull) — validated on the homelab.
+  martin:
+    image: ghcr.io/maplibre/martin:latest
+    container_name: atlas-martin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-atlas}:${POSTGRES_PASSWORD:-atlas}@db:5432/${POSTGRES_DB:-atlas}
+    volumes:
+      - ./tiles/martin.yaml:/config/martin.yaml:ro
+    command: ["--config", "/config/martin.yaml"]
+    ports:
+      - "3001:3000"
+
+  api:
+    build: ./apps/api
+    container_name: atlas-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-atlas}:${POSTGRES_PASSWORD:-atlas}@db:5432/${POSTGRES_DB:-atlas}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-atlas}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-atlas-minio-secret}
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ./apps/web
+    container_name: atlas-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_TILES_URL: ${NEXT_PUBLIC_TILES_URL:-http://localhost:3001}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
       - "${HOST_PORT:-8080}:80"
+
+  dagster:
+    build: ./ingest
+    container_name: atlas-dagster
+    profiles: ["analytics"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-atlas}:${POSTGRES_PASSWORD:-atlas}@db:5432/${POSTGRES_DB:-atlas}
+    ports:
+      - "3030:3000"
+
+  minio:
+    image: minio/minio:latest
+    container_name: atlas-minio
+    profiles: ["lakehouse"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-atlas}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-atlas-minio-secret}
+    volumes:
+      - atlas-minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  nominatim:
+    image: mediagis/nominatim:4.4
+    container_name: atlas-nominatim
+    profiles: ["geocode"]
+    restart: unless-stopped
+    environment:
+      PBF_URL: https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf
+      IMPORT_STYLE: address
+    ports:
+      - "8088:8080"
+    volumes:
+      - atlas-nominatim-data:/var/lib/postgresql/14/main
+
+  marquez:
+    image: marquezproject/marquez:latest
+    container_name: atlas-marquez
+    profiles: ["lineage"]
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+
+volumes:
+  atlas-db-data:
+  atlas-minio-data:
+  atlas-nominatim-data:

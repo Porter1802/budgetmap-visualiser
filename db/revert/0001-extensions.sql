@@ -1,0 +1,12 @@
+-- Revert atlas:0001-extensions from pg
+
+BEGIN;
+
+DROP EXTENSION IF EXISTS h3_postgis;
+DROP EXTENSION IF EXISTS h3;
+DROP EXTENSION IF EXISTS pgrouting;
+DROP EXTENSION IF EXISTS postgis_raster;
+DROP EXTENSION IF EXISTS postgis_topology;
+DROP EXTENSION IF EXISTS postgis;
+
+COMMIT;
