@@ -7,6 +7,27 @@ but it sequences the work so every phase ends with something that runs.
 
 ---
 
+## Decisions locked (2026-05-22)
+
+These resolve the outstanding questions and override anything looser below:
+
+1. **API access — public.** The capital-projects API is public, so **Dagster pulls it live**
+   on a schedule. No manual-dump workflow. The orchestration layer earns its keep. (settles §7.9)
+2. **History — deferred.** Historical packages are a *future enhancement*, not in initial scope.
+   `package_id`/`financial_year` columns still exist (set at ingest) but `mart_project_history`
+   and per-year `data.qld.gov.au` back-loading are parked. (settles §7.10)
+3. **WKT is coming ~June, into the main `/api/projects`.** Not hypothetical — design *and build*
+   the geometry-aware path now (§0a), don't just stub it. Lines/polygons/buffers should be ready
+   to light up the moment the June payload lands.
+4. **Migrations — sqitch.** Use sqitch (not ad-hoc numbered SQL) for `db/` — proper
+   deploy/revert/verify, and a deliberate learning pick.
+5. **FastAPI from the start.** `apps/api` stands up in **Phase 2**, not Phase 6. `/sa2/[code]`
+   reads marts through FastAPI from day one — no Next.js-route-handler interim.
+6. **Dark theme early.** Do the dark MapLibre restyle (spec §5.1) up front in **Phase 1**, not as
+   Phase 7 polish. Skip the QGDS-light interim.
+
+---
+
 ## 0. The one thing that changes everything: the data gap
 
 The v0.2 spec was written against the **internal Treasury / Databricks schema**.
@@ -37,8 +58,9 @@ now on public data, with the richer schema as a no-migration drop-in later.
 
 ### 0a. We assume WKT geometry arrives eventually — so design for it now
 
-The owner's call: **assume some WKT locations *will* become available** (richer bp3 exports, a
-future public field, or internal access). The cost of designing for that up front is near-zero;
+The owner's call (now firmer than "assume"): **WKT is expected ~June 2026 in the main
+`/api/projects` payload.** So this isn't speculative forward-design — it's near-term, and the
+geometry path is *built*, not stubbed. The cost of designing for it up front is near-zero;
 the cost of retrofitting it later (re-typing geometry columns, back-filling a 1:N table, reworking
 tile layers) is high. So Path A is built *WKT-shaped* from day one:
 
@@ -81,8 +103,8 @@ The POC is **not throwaway**. It already encodes hard-won knowledge we carry for
   RDP point-in-polygon, Nominatim hospital geocoding + on-disk cache) becomes the body of the
   first Dagster assets — moved into SQL/Python ops, not rewritten from scratch.
 - The QGDS palette / `tokens.ts` / custom MapLibre style and the deck.gl layer code are the
-  frontend's starting point (the spec wants a *dark* restyle in Phase 7, but the layer wiring
-  carries over).
+  frontend's starting point. Per locked decision #6 the dark restyle happens in Phase 1 (not
+  Phase 7), but the layer wiring carries over regardless.
 - The verified API quirks table above is the ingest spec.
 
 ---
@@ -111,7 +133,7 @@ Proposed repo layout (monorepo, evolve the current Next.js root into `apps/web`)
     api/             # FastAPI + DuckDB
   ingest/            # Dagster project (assets, ops, OpenLineage)
   transform/         # dbt-core project (sources, staging, marts)
-  db/                # PostGIS DDL + migrations (sqitch or plain SQL + a runner)
+  db/                # PostGIS DDL + migrations (sqitch — decision #4)
   quality/           # Soda Core checks
   tiles/             # Martin config; PMTiles export scripts
   infra/             # compose files, Traefik labels, Authentik notes
@@ -129,38 +151,47 @@ homelab". Each phase ends with a **demoable** artifact and an explicit **exit cr
 - Restructure to the monorepo layout above; move current app to `apps/web` (keep it running).
 - `docker-compose.yml`: Postgres 16 + PostGIS 3.4 (`postgis/postgis` image) + `h3-pg`,
   Adminer/psql for inspection. Pin versions.
-- `db/`: bootstrap SQL enabling `postgis`, `postgis_topology`, `h3`. A tiny migration runner
-  (numbered SQL files + a `psql -f` loop, or sqitch if we want to learn it).
-- CI-lite: a `make up && make migrate && make smoke` that any phase can extend.
-- **Exit:** `docker compose up` gives a PostGIS db with extensions; migrations apply clean.
+- `db/`: **sqitch** project (decision #4) — bootstrap change enabling `postgis`,
+  `postgis_topology`, `h3`, with verify + revert scripts. Learn the deploy/verify/revert loop.
+- CI-lite: a `make up && sqitch deploy && make smoke` that any phase can extend.
+- **Exit:** `docker compose up` gives a PostGIS db with extensions; `sqitch deploy` applies clean
+  and `sqitch verify` passes.
 
 ### Phase 1 — Foundation: boundaries + current projects in PostGIS, tiles, map
 *Spec §6 Phase 1. New tools: Dagster, PostGIS, Martin, MapLibre/PMTiles. Buildable here.*
-- **DDL** (`db/`): create `projects`, `project_locations`, `project_funding` (spec §3.1) —
-  but `geom geometry(Point,4326)`, no `geom_buffered`/`impact_radius_m` yet; `project_locations`
-  synthesised. Reference geos `sa2`, `lga`, `electorate_state`, `electorate_fed` (spec §3.3),
-  plus an `rdp_region` table (the POC's real admin unit). GIST indexes per spec.
+- **DDL** (`db/`, via sqitch): create `projects`, `project_locations`, `project_funding`
+  (spec §3.1) — `geom geometry(Geometry,4326)` and the WKT/`geom_buffered`/`impact_radius_m`
+  columns nullable from the first migration (§0a; WKT lands ~June). `project_locations` is a real
+  1:N table holding synthesised points today. Reference geos `sa2`, `lga`, `electorate_state`,
+  `electorate_fed` (spec §3.3), plus an `rdp_region` table (the POC's real admin unit). GIST
+  indexes per spec.
 - **Boundaries ingest (Dagster asset group #1):** ABS ASGS 2021 SA2/SA3/SA4/LGA + state/federal
   electorates → PostGIS. Source from ABS (the .shp/.gpkg downloads). RDP polygons from the S3
   geojson the POC already uses. Export each to **PMTiles** (`tippecanoe`) for the basemap.
-- **Projects ingest (asset group #2):** port `fetch_projects.py` into Dagster assets that write
-  to `projects` + `project_locations` + `project_funding` instead of GeoJSON. Keep the
-  `(Archived)` strip, funding rollup, bp3 multi-location handling, QLD-bbox guard.
+- **Projects ingest (asset group #2):** port `fetch_projects.py` into Dagster assets that pull
+  the **public API live on a schedule** (decision #1) and write to `projects` +
+  `project_locations` + `project_funding` instead of GeoJSON. Keep the `(Archived)` strip, funding
+  rollup, bp3 multi-location handling, QLD-bbox guard. Ingest already parses WKT → `geom` and
+  buffers when present, so the June payload needs no code change.
 - **Wire OpenLineage** into Dagster from day one (spec §6 P1) so the lineage graph populates
   as assets land — cheap now, painful to retrofit.
 - **Martin**: serve `projects`/`project_locations` and the SA2/RDP layers as MVT straight from
   PostGIS. Add to compose.
 - **Frontend**: point `apps/web` at Martin (`MVTLayer`) instead of static GeoJSON for regions +
-  pins; keep hover/click → side panel. This is the POC's map, re-sourced from tiles.
-- **Exit:** map loads SA2 + project pins from live PostGIS-backed tiles; hover/click works;
-  Dagster materialises boundaries + projects; lineage shows the graph.
+  pins; keep hover/click → side panel. This is the POC's map, re-sourced from tiles. **Do the
+  dark MapLibre restyle here** (decision #6 / spec §5.1) — muted greys, accent-per-portfolio —
+  rather than carrying the QGDS-light theme forward.
+- **Exit:** map loads SA2 + project pins from live PostGIS-backed tiles in the dark theme;
+  hover/click works; the scheduled Dagster job materialises boundaries + projects; lineage shows
+  the graph.
 
 ### Phase 2 — Modelling, marts, SA2 derivation, `/sa2/[code]`
 *Spec §6 Phase 2. New tools: dbt, Soda, Nominatim. Buildable here.*
 - **The keystone asset — `project_location_sa2` (spec §3.2):** nightly Dagster asset spatially
-  joining `project_locations.geom` against `sa2`. With points-only data, `overlap_fraction` is
-  trivially 1.0 per (location, containing SA2); the column/logic exists so Path B's lines/polygons
-  drop in. *This* is what makes "what's happening in my SA2" possible despite no native SA2.
+  joining `project_locations.geom` against `sa2`. Points give `overlap_fraction` 1.0, but write
+  the **real area-overlap math now** and test it against synthetic lines/polygons so the June WKT
+  feed allocates funding across multiple SA2s correctly with zero rework. *This* is what makes
+  "what's happening in my SA2" possible despite no native SA2.
 - **dbt-core** (`transform/`): sources over the raw tables; staging models; tests on every PK
   (spec §6 P2). Build `mart_sa2_summary` (per SA2×FY: project count, funding by source, dominant
   agency) and `mart_project_enriched` (project×package + `array_agg` SA2s touched, funding by
@@ -169,10 +200,13 @@ homelab". Each phase ends with a **demoable** artifact and an explicit **exit cr
   run loud on bad data (spec §6 P2).
 - **Address search**: self-hosted Nominatim (compose) → resolve address → containing SA2.
   (The POC already speaks Nominatim for hospital geocoding — reuse the client/UA/backoff.)
+- **`apps/api` (FastAPI) stands up here** (decision #5): the `/sa2/[code]` page reads marts
+  through FastAPI from day one — no Next.js-route-handler interim. This is also where address
+  search → SA2-resolve lives as an endpoint.
 - **Frontend `/sa2/[code]`**: SA2 outline + project list + a first context card, fed from marts
-  via FastAPI (stand up `apps/api` minimally here, or Next.js route handlers initially).
-- **Exit:** type/say an address → land on its SA2 page with real project list + funding from marts;
-  dbt tests + Soda checks green in the Dagster run.
+  via the FastAPI endpoints above.
+- **Exit:** type/say an address → land on its SA2 page with real project list + funding from marts,
+  served by FastAPI; dbt tests + Soda checks green in the Dagster run.
 
 ### Phase 3 — Context layers + the SA2 page gets rich
 *Spec §6 Phase 3. New tools: Observable Plot, multi-source dbt. Buildable here.*
@@ -207,9 +241,9 @@ homelab". Each phase ends with a **demoable** artifact and an explicit **exit cr
   raster — spec §2; otherwise SA2 indicator). Exposure metrics into `mart_sa2_summary`
   (% of SA2 in Q100 flood, etc.).
 - `/atlas` risk-overlay toggles (translucent `PolygonLayer`).
-- **3D mode**: `PolygonLayer` extruded by spend. *Caveat:* with points-only project data there
-  are no project polygons to extrude — extrude **SA2 choropleth** by a metric (funding/pop)
-  instead, which is the honest version given Path A.
+- **3D mode**: `PolygonLayer` extruded by spend. With points-only project data, extrude the
+  **SA2 choropleth** by a metric (funding/pop). Once the June WKT feed brings real project
+  polygons, this layer can additionally extrude those by spend per spec §5.2.
 - **Exit:** risk toggles work; 3D extrusion mode renders an SA2 metric.
 
 ### Phase 6 — Lakehouse mirror
@@ -223,8 +257,8 @@ homelab". Each phase ends with a **demoable** artifact and an explicit **exit cr
 
 ### Phase 7 — Polish + production on the homelab
 *Spec §6 Phase 7. Mostly homelab-validated.*
-- **Dark MapLibre restyle** in Maputnik (spec §5.1 — the POC is QGDS *light*; the spec wants
-  expensive-looking dark). Accent-per-portfolio, muted greys.
+- **Refine the dark MapLibre style** in Maputnik (the dark restyle itself landed in Phase 1 per
+  decision #6 — this is polish: fine-tune the accent palette, label hierarchy, zoom transitions).
 - deck.gl filter-change transitions; `/compare` page (up to 4 SA2s).
 - **Authentik forward-auth via Traefik** for all four routes (spec §8); Martin via token if
   forward-auth is painful for the tile fetches.
@@ -240,21 +274,22 @@ homelab". Each phase ends with a **demoable** artifact and an explicit **exit cr
 | 1 | Canonical description | **Moot (Path A):** public API has one `description`. Re-opens only under Path B |
 | 2 | Geometry presence | **Answered for now:** point-level lat/long only today; many projects have *no* coords (only 640/1085 on `/api/projects`). `geom` is **nullable** and typed `Geometry` (not `Point`) so future WKT lines/polygons need no remodel; ingest validation = bbox guard now, WKT parse path ready (§0a) |
 | 3 | `impactRadius` semantics | **Not present yet; column kept nullable** (§0a). When populated, treated as metres and buffered via `ST_Buffer(geom::geography, impact_radius_m)`. Confirm units if/when a real value appears |
-| 4 | `package.versionNumber` | **Open / Path B:** not surfaced publicly. We mint `package_id`/`financial_year` at ingest; multi-version is a Path-B concern |
+| 4 | `package.versionNumber` | **Deferred (decision #2):** not surfaced publicly; multi-version + history parked as a future enhancement. We still mint `package_id`/`financial_year` at ingest so it's there when history work begins |
 | 5 | `status`/`entryState` enums | **Answered (partial):** public package exposes only `status = 2`; can't distinguish live/withdrawn from public data |
 | 6 | `excluded` on locations | **Open / Path B:** no `locations`/`excluded` flag publicly; n/a until internal access |
 | 7 | `fromBP3` | **Reframed:** bp3 is a *separate endpoint* (`/api/bp3projects`) we already merge as `category="capital"`, not a boolean. Keep the category split |
 | 8 | `pinGroup` | **Open / Path B:** not present publicly |
-| 9 | API access from outside Treasury | **Critical / unresolved (§7.9):** decides Path A vs B and whether Dagster pulls live or ingests manual dumps. **Resolve before Phase 1** |
-| 10 | Historical packages | **Likely answered:** public API looks current-year only → history comes from `data.qld.gov.au` per-year dumps (spec datasets #3), not `package_id` calls |
+| 9 | API access from outside Treasury | **Resolved (decision #1):** the API is **public** → Dagster pulls it live on a schedule. No manual-dump workflow |
+| 10 | Historical packages | **Resolved (decision #2):** history is a **future enhancement**, out of initial scope. When picked up, it comes from `data.qld.gov.au` per-year dumps (public API is current-year only), not `package_id` calls |
 
 ---
 
 ## 5. Risks & sequencing notes
 
-- **Biggest risk is data, not tooling.** Half the spec's wow-factor (lines/polygons, 3D project
-  extrusion, impact rings, status filtering, multi-version history) depends on data the public
-  API doesn't give. Lock the Path A/B decision (esp. §7.9) **first** — it changes the DDL.
+- **Data drives the wow-factor, and it's partly en route.** Lines/polygons + 3D project extrusion
+  arrive with the ~June WKT feed (decision #3) — built dormant now, light up then. Status filtering
+  and multi-version history stay parked (only `status=2` public; history deferred per decision #2).
+  Build WKT-shaped from day one so June is a data event, not a migration.
 - **SA2 is derived, full stop.** The whole "my SA2" framing rests on `project_location_sa2`
   (Phase 2). Until that join exists, RDP regions (Phase 1, already in the POC) are the unit.
 - **Don't rewrite the POC ingest — port it.** `fetch_projects.py` is the tested source of truth
