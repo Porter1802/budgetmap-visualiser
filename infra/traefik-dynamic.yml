@@ -1,25 +1,56 @@
 # Traefik dynamic config for the Atlas routes on porterble.com.
-# Authentik runs a forward-auth outpost; every public route except the tile
-# server goes through it. Martin uses a static token instead (forward-auth on
-# every tile fetch is too chatty for the map).
+#
+# Reference only — adapt into your existing Traefik (file provider). Assumes a
+# single Authentik "Proxy / Forward auth (domain level)" provider whose embedded
+# outpost is reachable on the Traefik network as `authentik-server:9000`. Change
+# that host below to match your deployment (a standalone outpost, a different
+# service name, etc).
+#
+# Two things make Authentik forward-auth work end to end:
+#   1. the `authentik` middleware on each protected router (the auth subrequest);
+#   2. a higher-priority router per protected host that sends
+#      `/outpost.goauthentik.io/` to the outpost, so the login redirect/callback
+#      can complete on that hostname.
+# The tile server skips forward-auth (too chatty per tile) and uses a token.
 http:
   middlewares:
     authentik:
       forwardAuth:
-        address: "http://authentik-outpost:9000/outpost.goauthentik.io/auth/traefik"
+        address: "http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
         trustForwardHeader: true
         authResponseHeaders:
           - X-authentik-username
           - X-authentik-groups
           - X-authentik-email
+          - X-authentik-uid
 
     atlas-tile-token:
       headers:
-        # Tile requests carry ?token=… ; validate at the app edge instead.
         customRequestHeaders:
           X-Atlas-Tiles: "1"
 
   routers:
+    # --- Authentik outpost path on each protected host (priority > app router) ---
+    atlas-web-outpost:
+      rule: "Host(`atlas.porterble.com`) && PathPrefix(`/outpost.goauthentik.io/`)"
+      priority: 100
+      service: authentik
+      tls:
+        certResolver: letsencrypt
+    atlas-api-outpost:
+      rule: "Host(`atlas-api.porterble.com`) && PathPrefix(`/outpost.goauthentik.io/`)"
+      priority: 100
+      service: authentik
+      tls:
+        certResolver: letsencrypt
+    atlas-lineage-outpost:
+      rule: "Host(`atlas-lineage.porterble.com`) && PathPrefix(`/outpost.goauthentik.io/`)"
+      priority: 100
+      service: authentik
+      tls:
+        certResolver: letsencrypt
+
+    # --- Application routers (forward-auth protected) ---
     atlas-web:
       rule: "Host(`atlas.porterble.com`)"
       service: atlas-web
@@ -49,6 +80,10 @@ http:
         certResolver: letsencrypt
 
   services:
+    authentik:
+      loadBalancer:
+        servers:
+          - url: "http://authentik-server:9000"
     atlas-web:
       loadBalancer:
         servers:

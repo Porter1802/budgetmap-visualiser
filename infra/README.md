@@ -14,7 +14,10 @@ apt-installed PostGIS in this repo's CI; auth/routing is proven here on the VM.
 | `atlas-lineage.porterble.com` | Marquez (`marquez`) | Authentik forward-auth |
 
 `traefik-dynamic.yml` defines the forward-auth middleware and the four routers.
-Point Traefik's file provider at it.
+Point Traefik's file provider at it. For the full step-by-step (Authentik
+provider/application/outpost + the Traefik wiring), see
+[`AUTHENTIK_TRAEFIK.md`](AUTHENTIK_TRAEFIK.md). The Atlas stack runs **none** of
+its own Authentik/Traefik — these are integration notes for the existing ones.
 
 ## Bring-up
 
