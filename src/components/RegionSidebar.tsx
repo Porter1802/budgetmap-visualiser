@@ -1,15 +1,13 @@
 "use client";
 
-import { CATEGORY_HEX } from "@/lib/tokens";
+import { CATEGORY_HEX, CATEGORY_LABEL } from "@/lib/tokens";
 import type { ProjectCategory, RegionMeta } from "@/lib/types";
 
-const CATEGORY_LABEL: Record<ProjectCategory, string> = {
-  capital: "Capital works",
-  other: "Other projects",
-};
+// Fixed display order; only categories present in the data are shown.
+const CATEGORY_ORDER: ProjectCategory[] = ["capital", "other", "school", "police", "hospital"];
 
-// Expandable left rail. Top section toggles project categories (capital vs
-// other) with colour-swatch legends; the list below filters/zooms by region.
+// Expandable left rail. Top section toggles the project/facility categories
+// with colour-swatch legends; the list below filters/zooms by region.
 export default function RegionSidebar({
   regions,
   selected,
@@ -32,7 +30,7 @@ export default function RegionSidebar({
   onClear: () => void;
 }) {
   const allActive = selected.size === 0;
-  const cats: ProjectCategory[] = ["capital", "other"];
+  const cats = CATEGORY_ORDER.filter((c) => (categoryCounts[c] ?? 0) > 0);
   return (
     <div className="w-72 overflow-hidden rounded-md border border-qld-light bg-qld-white shadow-card">
       <button

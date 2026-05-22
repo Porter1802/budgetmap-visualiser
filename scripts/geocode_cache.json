@@ -1,0 +1,763 @@
+{
+"Alpha Hospital": [
+146.6329954,
+-23.649158
+],
+"Aramac Primary Healthcare Centre (PHC)": [
+145.2438709,
+-22.9710251
+],
+"Atherton Hospital": [
+145.4834837,
+-17.2664203
+],
+"Augathella Hospital": [
+146.5904491,
+-25.7957398
+],
+"Aurukun Primary Health Care Centre (PHC)": [
+141.7706816,
+-13.6020675
+],
+"Ayr Hospital": [
+147.4093594,
+-19.5649218
+],
+"Babinda Hospital": [
+145.9187413,
+-17.3432704
+],
+"Badu Island Primary Health Care Centre (PHC)": [
+142.1408475,
+-10.1204965
+],
+"Bamaga Hospital": [
+142.3848771,
+-10.8940608
+],
+"Bamaga Primary Health Care Centre (PHC)": [
+142.3891237,
+-10.8895119
+],
+"Baralaba Hospital": [
+149.8094579,
+-24.1845414
+],
+"Barcaldine Hospital": [
+145.2937581,
+-23.5532958
+],
+"Beaudesert Hospital": [
+153.0024375,
+-27.9850652
+],
+"Bedourie Primary Health Centre (PHC)": [
+139.4702373,
+-24.3595902
+],
+"Biggenden Hospital": [
+152.0506873,
+-25.5069655
+],
+"Biloela Hospital": [
+150.517671,
+-24.3959809
+],
+"Birdsville Primary Health Centre (PHC)": [
+139.3523124,
+-25.8980596
+],
+"Blackall Hospital": [
+145.4496688,
+-24.4226566
+],
+"Blackwater Hospital": [
+148.8782351,
+-23.5718517
+],
+"Boigu Island Primary Health Care Centre (PHC)": [
+142.2140701,
+-9.260027
+],
+"Bollon Community Clinic (PHC)": [
+147.3059333,
+-28.295356
+],
+"Boonah Hospital": [
+152.6788405,
+-27.9991127
+],
+"Boulia Primary Health Centre (PHC)": [
+139.932891,
+-22.8843505
+],
+"Bowen Hospital": [
+148.239804,
+-20.0069858
+],
+"Bundaberg Hospital": [
+152.3358071,
+-24.8688217
+],
+"Burketown Health Clinic (PHC)": [
+139.5465396,
+-17.7400597
+],
+"Caboolture Hospital": [
+152.9637385,
+-27.0815422
+],
+"Cairns Hospital": [
+145.7682628,
+-16.9122357
+],
+"Caloundra Hospital": [
+153.1195828,
+-26.8005399
+],
+"Camooweal Health Clinic (PHC)": [
+138.4936222,
+-19.7114805
+],
+"Capella Outpatients Clinic (PHC)": [
+148.0218077,
+-23.0830995
+],
+"Capricorn Coast Hospital": [
+150.7335435,
+-23.1434532
+],
+"Charleville Hospital": [
+146.2387385,
+-26.4120631
+],
+"Charters Towers Hospital": [
+146.2642457,
+-20.0760687
+],
+"Cherbourg Hospital": [
+151.956593,
+-26.2914204
+],
+"Childers Hospital": [
+152.2731808,
+-25.2394694
+],
+"Chillagoe Hospital (PHC)": [
+144.6691074,
+-17.1032055
+],
+"Chinchilla Hospital": [
+150.6351379,
+-26.7405247
+],
+"Clermont Hospital": [
+147.6322425,
+-22.8253805
+],
+"Cloncurry Hospital": [
+140.5278605,
+-20.7039691
+],
+"Coconut Island Primary Health Care Centre (PHC)": [
+143.0693619,
+-10.0502655
+],
+"Coen Primary Health Care Centre (PHC)": [
+143.3510185,
+-13.809115
+],
+"Collinsville Hospital": [
+147.8373424,
+-20.5456979
+],
+"Cooktown Hospital": [
+145.2503851,
+-15.4777242
+],
+"Croydon Hospital (PHC)": [
+142.300708,
+-18.1225661
+],
+"Cunnamulla Hospital": [
+145.6899469,
+-28.0707058
+],
+"Dajarra Health Clinic (PHC)": [
+139.598142,
+-21.8356123
+],
+"Dalby Hospital": [
+151.2802577,
+-27.1666997
+],
+"Darnley Island Primary Health Care Centre (PHC)": [
+143.7800692,
+-9.5790851
+],
+"Dauan Island Primary Health Care Centre (PHC)": [
+142.5369832,
+-9.423301
+],
+"Dimbulah Outpatients Clinic (PHC)": [
+145.0517688,
+-17.203011
+],
+"Dirranbandi Hospital": [
+148.2286967,
+-28.5793822
+],
+"Doomadgee Hospital": [
+138.8286675,
+-17.942322
+],
+"Duaringa Outpatients Clinic (PHC)": [
+149.680378,
+-23.695273
+],
+"Dysart Hospital": [
+148.3532694,
+-22.5832226
+],
+"Eidsvold Hospital": [
+151.1253177,
+-25.3823877
+],
+"Ellen Barron Family Centre": [
+153.0253423,
+-27.3859737
+],
+"Emerald Hospital": [
+148.1548133,
+-23.5151495
+],
+"Esk Hospital": [
+152.4182325,
+-27.2400493
+],
+"Facility Name": null,
+"Forsayth Hospital (PHC)": [
+143.6981822,
+-18.7451535
+],
+"Gatton Hospital": [
+152.27638,
+-27.5666908
+],
+"Gayndah Hospital": [
+151.6043912,
+-25.631327
+],
+"Gemfields Outpatients Clinic (PHC)": [
+147.7456873,
+-23.463723
+],
+"Georgetown Hospital (PHC)": [
+143.5476606,
+-18.2897926
+],
+"Gin Gin Hospital": [
+151.9534498,
+-24.9860313
+],
+"Gladstone Hospital": [
+151.248681,
+-23.8501066
+],
+"Glenmorgan Outpatients Clinic (PHC)": [
+149.604573,
+-27.2439265
+],
+"Gold Coast University Hospital": [
+153.3817841,
+-27.959679
+],
+"Goondiwindi Hospital": [
+150.3020667,
+-28.547941
+],
+"Gordonvale Hospital": [
+145.7862086,
+-17.0872006
+],
+"Gympie Hospital": [
+152.6581902,
+-26.1843805
+],
+"Herberton Hospital": [
+145.3805154,
+-17.3802198
+],
+"Hervey Bay Hospital": [
+152.8209263,
+-25.2987655
+],
+"Home Hill Hospital": [
+147.4166591,
+-19.6616617
+],
+"Hope Vale Primary Health Care Centre (PHC)": [
+145.1117018,
+-15.2948001
+],
+"Horn Island Primary Health Care Centre (PHC)": [
+142.2862673,
+-10.5864164
+],
+"Hughenden Hospital": [
+144.1875391,
+-20.8433004
+],
+"Ingham Hospital": [
+146.1641976,
+-18.6521719
+],
+"Inglewood Hospital": [
+151.0612402,
+-28.4182023
+],
+"Injinoo Primary Health Care Centre (PHC)": [
+142.2748681,
+-11.027523
+],
+"Injune Hospital": [
+148.5624404,
+-25.8468267
+],
+"Innisfail Hospital": [
+146.030227,
+-17.5194617
+],
+"Ipswich Hospital": [
+152.7590828,
+-27.6192535
+],
+"Isisford Primary Health Centre (PHC)": [
+144.4397443,
+-24.2590006
+],
+"Jandowae Hospital": [
+151.1052018,
+-26.7804603
+],
+"Joyce Palmer Health Service": [
+146.5787195,
+-18.7328819
+],
+"Julia Creek Hospital": [
+141.7502013,
+-20.6560521
+],
+"Jundah Primary Health Centre (PHC)": [
+143.1721165,
+-25.0762545
+],
+"Karumba Health Clinic (PHC)": [
+140.8404027,
+-17.4876079
+],
+"Kilcoy Hospital": [
+152.5613436,
+-26.9409782
+],
+"Kingaroy Hospital": [
+151.8386564,
+-26.5315291
+],
+"Kowanyama Primary Health Care Centre (PHC)": [
+141.7466133,
+-15.47623
+],
+"Kubin Primary Health Care Centre (PHC)": [
+142.2623759,
+-10.188419
+],
+"Laidley Hospital": [
+152.399766,
+-27.6330807
+],
+"Laura Primary Health Care Centre (PHC)": [
+144.0752465,
+-15.4492665
+],
+"Lockhart River Primary Health Care Centre (PHC)": [
+143.3049774,
+-13.0453165
+],
+"Logan Hospital": [
+153.141552,
+-27.6700316
+],
+"Longreach Hospital": [
+144.2611202,
+-23.4390061
+],
+"Mabuiag Island Primary Health Care Centre (PHC)": [
+142.1794994,
+-9.957593
+],
+"Mackay Base Hospital": [
+149.1562161,
+-21.1457323
+],
+"Magnetic Island Health Service Centre (PHC)": [
+146.8480475,
+-19.1562434
+],
+"Malakoola Primary Health Care Centre (PHC)": [
+142.1163926,
+-12.5626035
+],
+"Malanda Outpatients Clinic (PHC)": [
+145.5959372,
+-17.352837
+],
+"Maleny Hospital": [
+152.8447564,
+-26.7548739
+],
+"Mapoon Primary Health Care Centre (PHC)": [
+142.2243945,
+-11.844092
+],
+"Mareeba Hospital": [
+145.4244121,
+-16.9872181
+],
+"Marie Rose Centre (PHC)": [
+153.4046978,
+-27.4978857
+],
+"Maryborough Hospital": [
+152.6906452,
+-25.5218403
+],
+"Mater Hospital Brisbane Public": [
+153.0200774,
+-27.479264
+],
+"Mater Mothers' Hospital Public": [
+153.0200774,
+-27.479264
+],
+"McKinlay Primary Health Clinic": [
+141.2066104,
+-21.4224355
+],
+"Meandarra Outpatients Clinic (PHC)": [
+149.8620623,
+-27.310696
+],
+"Miles Hospital": [
+150.1907573,
+-26.6580436
+],
+"Millaa Millaa Outpatients Clinic (PHC)": [
+145.6304622,
+-17.493974
+],
+"Millmerran Hospital": [
+151.2630883,
+-27.8794524
+],
+"Mitchell Hospital": [
+147.9728112,
+-26.490007
+],
+"Monto Hospital": [
+151.1126708,
+-24.8657874
+],
+"Moonie Outpatients Clinic (PHC)": [
+150.3148447,
+-27.7333655
+],
+"Moranbah Hospital": [
+148.0558554,
+-22.0025019
+],
+"Mornington Island Hospital": [
+139.1804503,
+-16.6644641
+],
+"Morven Outpatients Clinic (PHC)": [
+147.1301211,
+-26.482916
+],
+"Mossman Hospital": [
+145.3678964,
+-16.4638313
+],
+"Mount Garnet Outpatients Clinic (PHC)": [
+145.0714294,
+-17.641608
+],
+"Mount Isa Hospital": [
+139.493929,
+-20.7304588
+],
+"Mount Morgan Hospital": [
+150.3929532,
+-23.6454219
+],
+"Mount Perry Health Centre (PHC)": [
+151.6647574,
+-25.1859565
+],
+"Moura Hospital": [
+149.9764572,
+-24.5757619
+],
+"Mundubbera Hospital": [
+151.2933141,
+-25.5876842
+],
+"Mungindi Hospital": [
+148.9893018,
+-28.9725544
+],
+"Murgon Hospital": [
+151.9506914,
+-26.239278
+],
+"Murray Island Primary Health Centre (PHC)": [
+144.0544903,
+-9.9147698
+],
+"Muttaburra Primary Health Centre (PHC)": [
+144.5478903,
+-22.5945192
+],
+"Nambour Hospital": [
+152.9509171,
+-26.6209583
+],
+"Nanango Hospital": [
+152.0075912,
+-26.665872
+],
+"New Mapoon Health Centre (PHC)": [
+142.383015,
+-10.8666672
+],
+"Normanton Hospital": [
+141.0866636,
+-17.6779579
+],
+"Oakey Hospital": [
+151.71929,
+-27.4242309
+],
+"Palm Island Primary Health Care Clinic": [
+146.564155,
+-18.702764
+],
+"Pormpuraaw Primary Health Care Centre (PHC)": [
+141.6211254,
+-14.8999471
+],
+"Princess Alexandra Hospital": [
+153.0328694,
+-27.4987917
+],
+"Proserpine Hospital": [
+148.584847,
+-20.4001691
+],
+"Queen Elizabeth Ii Jubilee Hospital": [
+153.0485921,
+-27.5597334
+],
+"Queensland Children's Hospital": [
+153.026536,
+-27.4840011
+],
+"Quilpie Hospital": [
+144.2745388,
+-26.6161605
+],
+"Ravenshoe Outpatients Clinic (PHC)": [
+145.4941236,
+-17.620327
+],
+"Redcliffe Hospital": [
+153.1044198,
+-27.2277353
+],
+"Redland Hospital": [
+153.2519677,
+-27.5403286
+],
+"Richmond Hospital": [
+143.150749,
+-20.7386963
+],
+"Robina Hospital": [
+153.3756193,
+-28.0709989
+],
+"Rockhampton Base Hospital": [
+150.4949357,
+-23.3799135
+],
+"Roma Hospital": [
+148.7752574,
+-26.568463
+],
+"Royal Brisbane & Women's Hospital": [
+153.0237294,
+-27.4496625
+],
+"Saibai Island Primary Health Care Centre (PHC)": [
+142.698883,
+-9.396944
+],
+"Sarina Hospital": [
+149.2101045,
+-21.4211117
+],
+"Seisia Primary Health Care Centre (PHC)": [
+142.3676416,
+-10.8464492
+],
+"Springsure Hospital": [
+148.0847435,
+-24.1198568
+],
+"St George Hospital": [
+148.5924071,
+-28.0268294
+],
+"St Paul's Primary Health Care Centre (PHC)": [
+142.2623759,
+-10.188419
+],
+"Stanthorpe Hospital": [
+151.9286253,
+-28.6609248
+],
+"Stephen Island Primary Health Care Centre (PHC)": [
+143.5425377,
+-9.5077025
+],
+"Sunshine Coast University Hospital": [
+153.1133041,
+-26.7469318
+],
+"Surat Hospital": [
+149.0635378,
+-27.1568376
+],
+"Surgical Treatment and Rehabilitation Service": [
+153.0237294,
+-27.4496625
+],
+"Tambo Primary Health Care Centre (PHC)": [
+146.3312403,
+-24.9071275
+],
+"Tara Hospital": [
+150.456688,
+-27.2739146
+],
+"Taroom Hospital": [
+149.7991576,
+-25.6386856
+],
+"Texas Hospital": [
+151.178962,
+-28.8553423
+],
+"Thargomindah Hospital (PHC)": [
+143.8203995,
+-27.9959679
+],
+"The Prince Charles Hospital": [
+153.0230854,
+-27.388817
+],
+"Theodore Hospital": [
+150.0753079,
+-24.9432
+],
+"Thursday Island Hospital": [
+142.2111588,
+-10.5878936
+],
+"Thursday Island Primary Health Care Centre (PHC)": [
+142.2470989,
+-10.561097
+],
+"Toowoomba Hospital": [
+151.9443098,
+-27.5694082
+],
+"Townsville University Hospital": [
+146.7484491,
+-19.323117
+],
+"Tully Hospital": [
+145.923694,
+-17.9271323
+],
+"Umagico Primary Health Care Centre (PHC)": [
+142.3952188,
+-10.915634
+],
+"Wallumbilla Outpatients Clinic (PHC)": [
+149.1852419,
+-26.593772
+],
+"Wandoan Hospital (PHC)": [
+149.9011851,
+-26.135673
+],
+"Warraber Island Primary Health Care Centre (PHC)": [
+142.8245966,
+-10.2080721
+],
+"Warwick Hospital": [
+152.0174371,
+-28.2243987
+],
+"Weipa Hospital": [
+141.8668347,
+-12.640854
+],
+"Windorah Clinic (PHC)": [
+142.6548165,
+-25.4204781
+],
+"Winton Hospital": [
+143.0407624,
+-22.3809726
+],
+"Wondai Hospital": [
+151.878573,
+-26.3237058
+],
+"Woorabinda Hospital": [
+149.4570316,
+-24.1089105
+],
+"Wujal Wujal Primary Health Care Centre (PHC)": [
+145.3084619,
+-15.9714355
+],
+"Yam Island Primary Health Care Centre (PHC)": [
+142.7755781,
+-9.8996264
+],
+"Yaraka Clinic (PHC)": [
+144.0745358,
+-24.8841389
+],
+"Yarrabah Emergency Service (PHC)": [
+145.8746489,
+-17.0172815
+],
+"Yorke Island Primary Health Care Centre (PHC)": [
+143.406808,
+-9.7535039
+]
+}

@@ -4,7 +4,16 @@ import { useEffect, useRef } from "react";
 import * as Plot from "@observablehq/plot";
 import { CATEGORY_HEX, statusMeta } from "@/lib/tokens";
 import { formatCompact, formatFull } from "@/lib/format";
-import type { ProjectProps } from "@/lib/types";
+import type { ProjectCategory, ProjectProps } from "@/lib/types";
+
+// Singular chip labels (the sidebar legend uses plural forms).
+const CATEGORY_CHIP: Record<ProjectCategory, string> = {
+  capital: "Capital works",
+  other: "Other project",
+  school: "School",
+  police: "Police station",
+  hospital: "Hospital",
+};
 
 const OFFICIAL = "https://budgetmap.treasury.qld.gov.au/";
 
@@ -71,7 +80,7 @@ export default function SidePanel({
 
   const tabColor = CATEGORY_HEX[project.category];
   const status = statusMeta(project.status);
-  const isCapital = project.category === "capital";
+  const isBudget = project.category === "capital" || project.category === "other";
   const segs = SEGMENTS.map((s) => ({
     ...s,
     value: (project[s.key] as number) || 0,
@@ -93,14 +102,14 @@ export default function SidePanel({
               className="rounded-full px-2.5 py-1 text-xs font-medium text-qld-white"
               style={{ background: tabColor }}
             >
-              {isCapital ? "Capital works" : "Other project"}
+              {CATEGORY_CHIP[project.category]}
             </span>
-            {project.type && (
+            {project.type && project.type !== CATEGORY_CHIP[project.category] && (
               <span className="rounded-full bg-qld-info-lighter px-2.5 py-1 text-xs font-medium text-qld-blue">
                 {project.type}
               </span>
             )}
-            {!isCapital && (
+            {isBudget && (
               <span
                 className="rounded-full px-2.5 py-1 text-xs font-medium"
                 style={{ background: status.css, color: status.text }}
@@ -150,26 +159,28 @@ export default function SidePanel({
         </div>
       )}
 
-      <div className="border-t border-qld-light px-6 py-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-qld-dark">Total funding</p>
-        <p className="mt-1 font-mono text-[32px] font-medium tabnum text-qld-blue">
-          {formatCompact(project.total_funding)}
-        </p>
-        {segs.length > 0 && (
-          <>
-            <div ref={chartRef} className="mt-3" />
-            <ul className="mt-3 space-y-1.5">
-              {segs.map((s) => (
-                <li key={s.label} className="flex items-center gap-2 text-xs text-qld-darker">
-                  <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: s.color }} />
-                  <span className="flex-1">{s.label}</span>
-                  <span className="tabnum text-qld-darkest">{formatFull(s.value)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+      {isBudget && (
+        <div className="border-t border-qld-light px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-qld-dark">Total funding</p>
+          <p className="mt-1 font-mono text-[32px] font-medium tabnum text-qld-blue">
+            {formatCompact(project.total_funding)}
+          </p>
+          {segs.length > 0 && (
+            <>
+              <div ref={chartRef} className="mt-3" />
+              <ul className="mt-3 space-y-1.5">
+                {segs.map((s) => (
+                  <li key={s.label} className="flex items-center gap-2 text-xs text-qld-darker">
+                    <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: s.color }} />
+                    <span className="flex-1">{s.label}</span>
+                    <span className="tabnum text-qld-darkest">{formatFull(s.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {project.description && (
         <div className="border-t border-qld-light px-6 py-5">

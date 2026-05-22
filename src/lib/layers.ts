@@ -5,12 +5,9 @@ import {
   BLUE,
   BLUE_K25,
   BLUE_W80,
-  CAPITAL,
-  CAPITAL_DARK,
-  OTHER,
-  OTHER_DARK,
+  CATEGORY_FILL,
+  CATEGORY_STROKE,
   rgba,
-  type RGB,
 } from "./tokens";
 import type {
   ProjectCategory,
@@ -136,14 +133,12 @@ export function buildLayers(args: BuildArgs): Layer[] {
       },
       getFillColor: (c) => {
         const active = c.key === hoveredKey;
-        const color: RGB = c.category === "capital" ? CAPITAL : OTHER;
-        return rgba(color, c.visible ? (active ? 0.95 : 0.8) : 0.12);
+        return rgba(CATEGORY_FILL[c.category], c.visible ? (active ? 0.95 : 0.8) : 0.12);
       },
       getLineColor: (c) => {
         const active =
           c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
-        const dark: RGB = c.category === "capital" ? CAPITAL_DARK : OTHER_DARK;
-        return rgba(dark, c.visible ? (active ? 1 : 0.85) : 0.15);
+        return rgba(CATEGORY_STROKE[c.category], c.visible ? (active ? 1 : 0.85) : 0.15);
       },
       getLineWidth: 1.5,
       updateTriggers: {

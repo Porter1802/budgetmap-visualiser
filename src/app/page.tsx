@@ -128,11 +128,11 @@ export default function Page() {
           <p className="mt-0.5 text-xs text-qld-dark">
             {meta ? (
               <>
-                <span className="tabnum">{shown.length}</span> projects ·{" "}
-                <span className="tabnum">{formatCompact(totalShown)}</span> shown
+                <span className="tabnum">{shown.length}</span> locations ·{" "}
+                <span className="tabnum">{formatCompact(totalShown)}</span> funding
               </>
             ) : (
-              "Loading capital projects…"
+              "Loading map data…"
             )}
           </p>
         </div>

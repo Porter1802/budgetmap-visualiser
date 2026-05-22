@@ -1,4 +1,4 @@
-export type ProjectCategory = "capital" | "other";
+export type ProjectCategory = "capital" | "other" | "school" | "police" | "hospital";
 
 export interface ProjectProps {
   project_id: number;
