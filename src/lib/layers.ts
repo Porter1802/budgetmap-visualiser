@@ -1,212 +1,167 @@
 import type { Layer } from "@deck.gl/core";
-import { ScatterplotLayer, PathLayer, PolygonLayer } from "@deck.gl/layers";
-import { latLngToCell, cellToBoundary } from "h3-js";
+import { ScatterplotLayer, TextLayer, GeoJsonLayer } from "@deck.gl/layers";
+import type { Feature } from "geojson";
 import {
   BLUE,
   BLUE_K25,
+  BLUE_W80,
   INFO,
-  HEX_RAMP,
-  NAVY,
   rgba,
-  agencyBucket,
   type RGB,
-  type RGBA,
 } from "./tokens";
-import type { ProjectFeature, MapMode } from "./types";
+import type { ProjectFeature, RegionProps, RegionCollection } from "./types";
 
-const H3_RES = 5;
+// Fixed pin radius — points are not sized by spend.
+const DOT_RADIUS = 6;
 
-// Radius/width scale gently with funding on a log curve so a $9b project does
-// not swamp a $10k one.
-function fundingRadius(funding: number): number {
-  return 4 + 6 * Math.log10(Math.max(funding, 1) / 1e4 + 1);
-}
-function fundingWidth(funding: number): number {
-  return 2 + 3 * Math.log10(Math.max(funding, 1) / 1e4 + 1);
-}
-
-function fillFor(f: ProjectFeature, mode: MapMode): RGB {
-  if (mode === "agency") return agencyBucket(f.properties.agency).rgb;
-  return BLUE;
+export interface ClusterPoint {
+  key: string;
+  coords: [number, number];
+  members: ProjectFeature[];
+  visible: boolean; // passes the active region filter
 }
 
 interface BuildArgs {
   features: ProjectFeature[];
-  mode: MapMode;
-  hoveredId: number | null;
+  regions: RegionCollection | null;
+  selectedRegions: Set<number>; // empty = all
+  hoveredKey: string | null;
   selectedId: number | null;
-  visibleAgencies: Set<string> | null; // null = all visible
   reducedMotion: boolean;
 }
 
-function isVisible(f: ProjectFeature, visibleAgencies: Set<string> | null): boolean {
-  return !visibleAgencies || visibleAgencies.has(f.properties.agency);
+function passesRegion(f: ProjectFeature, selected: Set<number>): boolean {
+  if (selected.size === 0) return true;
+  return f.properties.region_codes.some((c) => selected.has(c));
 }
 
-// Filtered-out features fade rather than vanish, preserving spatial context.
-function alphaFor(f: ProjectFeature, args: BuildArgs, base: number): number {
-  return isVisible(f, args.visibleAgencies) ? base : 0.08;
+// Group points sharing an exact coordinate so coincident pins render as one dot
+// with a count badge instead of stacking invisibly.
+export function clusterPoints(
+  features: ProjectFeature[],
+  selected: Set<number>
+): ClusterPoint[] {
+  const map = new Map<string, ClusterPoint>();
+  for (const f of features) {
+    if (f.geometry.type !== "Point") continue;
+    const [lon, lat] = f.geometry.coordinates as [number, number];
+    const key = `${lon},${lat}`;
+    let cell = map.get(key);
+    if (!cell) {
+      cell = { key, coords: [lon, lat], members: [], visible: false };
+      map.set(key, cell);
+    }
+    cell.members.push(f);
+    if (passesRegion(f, selected)) cell.visible = true;
+  }
+  return [...map.values()];
 }
 
 const TRANSITION = (reduced: boolean) =>
   reduced
     ? undefined
     : {
-        getFillColor: { duration: 600, easing: (t: number) => t },
-        getLineColor: { duration: 600, easing: (t: number) => t },
-        getRadius: { duration: 600 },
+        getFillColor: { duration: 400, easing: (t: number) => t },
+        getLineColor: { duration: 400, easing: (t: number) => t },
       };
 
 export function buildLayers(args: BuildArgs): Layer[] {
-  const { features, mode, hoveredId, selectedId, reducedMotion } = args;
-
-  if (mode === "hexbin") return [hexbinLayer(args)];
-
-  const points = features.filter((f) => f.geometry.type === "Point");
-  const lines = features.filter((f) => /LineString/.test(f.geometry.type));
-  const polys = features.filter((f) => /Polygon/.test(f.geometry.type));
-
+  const { regions, selectedRegions, hoveredKey, selectedId, reducedMotion } = args;
   const layers: Layer[] = [];
 
+  // ── Region polygons (blue) ────────────────────────────────────────────────
+  if (regions) {
+    const hasFilter = selectedRegions.size > 0;
+    const codeOf = (f: { properties: unknown }) =>
+      (f.properties as RegionProps).RDP_code;
+    layers.push(
+      new GeoJsonLayer({
+        id: "regions",
+        data: regions.features as unknown as Feature[],
+        pickable: false,
+        stroked: true,
+        filled: true,
+        lineWidthUnits: "pixels",
+        lineWidthMinPixels: 1,
+        getFillColor: (f) => {
+          const sel = selectedRegions.has(codeOf(f));
+          if (!hasFilter) return rgba(BLUE_W80, 0.18);
+          return sel ? rgba(BLUE, 0.22) : rgba(BLUE_W80, 0.05);
+        },
+        getLineColor: (f) => {
+          const sel = selectedRegions.has(codeOf(f));
+          if (!hasFilter) return rgba(BLUE_K25, 0.5);
+          return sel ? rgba(BLUE_K25, 1) : rgba(BLUE_K25, 0.18);
+        },
+        getLineWidth: (f) => (hasFilter && selectedRegions.has(codeOf(f)) ? 2 : 1),
+        updateTriggers: {
+          getFillColor: [selectedRegions],
+          getLineColor: [selectedRegions],
+          getLineWidth: [selectedRegions],
+        },
+        transitions: TRANSITION(reducedMotion) as object | undefined,
+      })
+    );
+  }
+
+  const clusters = clusterPoints(args.features, selectedRegions);
+
+  // ── Project pins (blue, fixed size) ────────────────────────────────────────
   layers.push(
-    new ScatterplotLayer<ProjectFeature>({
+    new ScatterplotLayer<ClusterPoint>({
       id: "points",
-      data: points,
+      data: clusters,
       pickable: true,
       stroked: true,
       filled: true,
       radiusUnits: "pixels",
       lineWidthUnits: "pixels",
-      getPosition: (f) => f.geometry.coordinates as [number, number],
-      getRadius: (f) => {
-        const r = fundingRadius(f.properties.total_funding);
-        const active = f.properties.project_id === hoveredId || f.properties.project_id === selectedId;
-        return active ? r * 1.25 : r;
+      getPosition: (c) => c.coords,
+      getRadius: (c) => {
+        const active = c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
+        const base = c.members.length > 1 ? DOT_RADIUS + 3 : DOT_RADIUS;
+        return active ? base * 1.25 : base;
       },
-      getFillColor: (f) => {
-        const active = f.properties.project_id === hoveredId;
-        const c = active ? INFO : fillFor(f, mode);
-        return rgba(c, alphaFor(f, args, active ? 0.95 : 0.75));
+      getFillColor: (c) => {
+        const active = c.key === hoveredKey;
+        const color: RGB = active ? INFO : BLUE;
+        return rgba(color, c.visible ? (active ? 0.95 : 0.8) : 0.12);
       },
-      getLineColor: (f) => {
-        const active = f.properties.project_id === hoveredId || f.properties.project_id === selectedId;
-        const c = active ? INFO : BLUE_K25;
-        return rgba(c, alphaFor(f, args, 1));
+      getLineColor: (c) => {
+        const active =
+          c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
+        return rgba(active ? INFO : BLUE_K25, c.visible ? 1 : 0.15);
       },
       getLineWidth: 1.5,
       updateTriggers: {
-        getFillColor: [mode, hoveredId, args.visibleAgencies],
-        getLineColor: [mode, hoveredId, selectedId, args.visibleAgencies],
-        getRadius: [hoveredId, selectedId],
+        getFillColor: [hoveredKey, selectedRegions],
+        getLineColor: [hoveredKey, selectedId, selectedRegions],
+        getRadius: [hoveredKey, selectedId],
       },
       transitions: TRANSITION(reducedMotion) as object | undefined,
     })
   );
 
-  // Lines and polygons are dispatched for completeness; the current published
-  // payload is points-only, so these are typically empty.
-  if (lines.length) {
+  // ── Cluster count badges ────────────────────────────────────────────────────
+  const multi = clusters.filter((c) => c.members.length > 1);
+  if (multi.length) {
     layers.push(
-      new PathLayer<ProjectFeature>({
-        id: "lines",
-        data: lines,
-        pickable: true,
-        widthUnits: "pixels",
-        capRounded: true,
-        jointRounded: true,
-        getPath: (f) => f.geometry.coordinates as [number, number][],
-        getColor: (f) => {
-          const active = f.properties.project_id === hoveredId;
-          return rgba(active ? INFO : fillFor(f, mode), alphaFor(f, args, 0.9));
-        },
-        getWidth: (f) => fundingWidth(f.properties.total_funding),
-        updateTriggers: { getColor: [mode, hoveredId, args.visibleAgencies] },
-      })
-    );
-  }
-
-  if (polys.length) {
-    layers.push(
-      new PolygonLayer<ProjectFeature>({
-        id: "polys",
-        data: polys,
-        pickable: true,
-        stroked: true,
-        filled: true,
-        lineWidthUnits: "pixels",
-        getPolygon: (f) => f.geometry.coordinates as number[][][],
-        getFillColor: (f) => {
-          const active = f.properties.project_id === hoveredId;
-          return rgba(active ? INFO : fillFor(f, mode), alphaFor(f, args, 0.3));
-        },
-        getLineColor: (f) => rgba(NAVY, alphaFor(f, args, 1)),
-        getLineWidth: 1.5,
-        updateTriggers: { getFillColor: [mode, hoveredId, args.visibleAgencies] },
+      new TextLayer<ClusterPoint>({
+        id: "counts",
+        data: multi,
+        pickable: false,
+        getPosition: (c) => c.coords,
+        getText: (c) => String(c.members.length),
+        getSize: 12,
+        sizeUnits: "pixels",
+        getColor: (c) => rgba([255, 255, 255], c.visible ? 1 : 0.4),
+        fontWeight: 700,
+        getTextAnchor: "middle",
+        getAlignmentBaseline: "center",
+        updateTriggers: { getColor: [selectedRegions] },
       })
     );
   }
 
   return layers;
-}
-
-interface HexCell {
-  hex: string;
-  funding: number;
-  count: number;
-}
-
-export function aggregateHexes(features: ProjectFeature[], visibleAgencies: Set<string> | null): HexCell[] {
-  const map = new Map<string, HexCell>();
-  for (const f of features) {
-    if (f.geometry.type !== "Point") continue;
-    if (visibleAgencies && !visibleAgencies.has(f.properties.agency)) continue;
-    const [lon, lat] = f.geometry.coordinates as [number, number];
-    const hex = latLngToCell(lat, lon, H3_RES);
-    const cell = map.get(hex) || { hex, funding: 0, count: 0 };
-    cell.funding += f.properties.total_funding;
-    cell.count += 1;
-    map.set(hex, cell);
-  }
-  return [...map.values()];
-}
-
-function rampColor(t: number): RGB {
-  const x = Math.max(0, Math.min(1, t)) * (HEX_RAMP.length - 1);
-  const i = Math.floor(x);
-  const frac = x - i;
-  const a = HEX_RAMP[i];
-  const b = HEX_RAMP[Math.min(i + 1, HEX_RAMP.length - 1)];
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * frac),
-    Math.round(a[1] + (b[1] - a[1]) * frac),
-    Math.round(a[2] + (b[2] - a[2]) * frac),
-  ];
-}
-
-// H3 hexagons rendered via PolygonLayer (boundaries from h3-js) so we avoid
-// @deck.gl/geo-layers and its heavy loaders.gl dependency chain. cellToBoundary
-// returns [lat, lng] pairs; PolygonLayer wants [lng, lat].
-function hexbinLayer(args: BuildArgs) {
-  const cells = aggregateHexes(args.features, args.visibleAgencies);
-  const max = Math.max(1, ...cells.map((c) => Math.log10(c.funding + 1)));
-  return new PolygonLayer<HexCell>({
-    id: "hexbin",
-    data: cells,
-    pickable: true,
-    extruded: true,
-    filled: true,
-    stroked: false,
-    elevationScale: 30,
-    getPolygon: (c) => cellToBoundary(c.hex).map(([lat, lng]) => [lng, lat]),
-    getFillColor: (c): RGBA => {
-      const t = Math.log10(c.funding + 1) / max;
-      return rgba(rampColor(t), 0.85);
-    },
-    getElevation: (c) => Math.log10(c.funding + 1) * 1000,
-    updateTriggers: {
-      getFillColor: [args.visibleAgencies],
-      getElevation: [args.visibleAgencies],
-    },
-    transitions: args.reducedMotion ? undefined : { getElevation: { duration: 600 } },
-  });
 }

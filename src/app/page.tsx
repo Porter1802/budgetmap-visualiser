@@ -2,13 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import ModeToggle from "@/components/ModeToggle";
 import SearchBox from "@/components/SearchBox";
-import FilterChips from "@/components/FilterChips";
-import Legend from "@/components/Legend";
+import RegionFilter from "@/components/RegionFilter";
 import SidePanel from "@/components/SidePanel";
 import { formatCompact } from "@/lib/format";
-import type { FeatureCollection, ProjectFeature, ProjectProps, MapMode, Meta } from "@/lib/types";
+import type {
+  FeatureCollection,
+  ProjectFeature,
+  ProjectProps,
+  RegionCollection,
+  Meta,
+} from "@/lib/types";
 
 // MapLibre needs the DOM; load the map client-side only.
 const MapView = dynamic(() => import("@/components/Map"), {
@@ -16,23 +20,31 @@ const MapView = dynamic(() => import("@/components/Map"), {
   loading: () => <SkeletonMap />,
 });
 
+function passesRegion(f: ProjectFeature, selected: Set<number>): boolean {
+  if (selected.size === 0) return true;
+  return f.properties.region_codes.some((c) => selected.has(c));
+}
+
 export default function Page() {
   const [features, setFeatures] = useState<ProjectFeature[]>([]);
+  const [regions, setRegions] = useState<RegionCollection | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<MapMode>("blue");
   const [search, setSearch] = useState("");
-  const [selectedAgencies, setSelectedAgencies] = useState<Set<string>>(new Set());
-  const [selected, setSelected] = useState<ProjectProps | null>(null);
+  const [selectedRegions, setSelectedRegions] = useState<Set<number>>(new Set());
+  const [members, setMembers] = useState<ProjectProps[] | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     Promise.all([
       fetch("/data/projects.geojson").then((r) => r.json() as Promise<FeatureCollection>),
+      fetch("/data/regions.geojson").then((r) => r.json() as Promise<RegionCollection>),
       fetch("/data/meta.json").then((r) => r.json() as Promise<Meta>),
-    ]).then(([fc, m]) => {
+    ]).then(([fc, rc, m]) => {
       setFeatures(fc.features);
+      setRegions(rc);
       setMeta(m);
       setLoading(false);
     });
@@ -48,31 +60,36 @@ export default function Page() {
     );
   }, [features, search]);
 
-  const visibleAgencies = selectedAgencies.size === 0 ? null : selectedAgencies;
-
-  const totalShown = useMemo(
-    () =>
-      searched
-        .filter((f) => !visibleAgencies || visibleAgencies.has(f.properties.agency))
-        .reduce((s, f) => s + f.properties.total_funding, 0),
-    [searched, visibleAgencies]
+  const shown = useMemo(
+    () => searched.filter((f) => passesRegion(f, selectedRegions)),
+    [searched, selectedRegions]
   );
 
-  const toggleAgency = (name: string) =>
-    setSelectedAgencies((prev) => {
+  const totalShown = useMemo(
+    () => shown.reduce((s, f) => s + f.properties.total_funding, 0),
+    [shown]
+  );
+
+  const toggleRegion = (code: number) =>
+    setSelectedRegions((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      next.has(code) ? next.delete(code) : next.add(code);
       return next;
     });
+
+  const selected = members ? members[activeIndex] ?? null : null;
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <MapView
         features={searched}
-        mode={mode}
-        visibleAgencies={visibleAgencies}
+        regions={regions}
+        selectedRegions={selectedRegions}
         selectedId={selected?.project_id ?? null}
-        onSelect={(p) => setSelected(p)}
+        onSelect={(m) => {
+          setMembers(m);
+          setActiveIndex(0);
+        }}
         reducedMotion={reducedMotion}
       />
 
@@ -83,7 +100,7 @@ export default function Page() {
           <p className="mt-0.5 text-xs text-qld-dark">
             {meta ? (
               <>
-                <span className="tabnum">{meta.mapped_projects}</span> projects ·{" "}
+                <span className="tabnum">{shown.length}</span> projects ·{" "}
                 <span className="tabnum">{formatCompact(totalShown)}</span> shown
               </>
             ) : (
@@ -96,33 +113,27 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Top-right: mode toggle */}
-      <div className="absolute right-4 top-4 z-10">
-        <ModeToggle mode={mode} onChange={setMode} />
-      </div>
-
-      {/* Top-center: agency filter chips */}
+      {/* Top-center: region filter */}
       {meta && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden max-w-[46vw] -translate-x-1/2 lg:block">
-          <div className="pointer-events-auto rounded-md border border-qld-light bg-qld-white/95 px-3 py-2 shadow-card backdrop-blur-sm">
-            <FilterChips
-              agencies={meta.agencies}
-              selected={selectedAgencies}
-              onToggle={toggleAgency}
-              onClear={() => setSelectedAgencies(new Set())}
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 hidden max-w-[52vw] -translate-x-1/2 lg:block">
+          <div className="pointer-events-auto max-h-[40vh] overflow-y-auto rounded-md border border-qld-light bg-qld-white/95 px-3 py-2 shadow-card backdrop-blur-sm">
+            <RegionFilter
+              regions={meta.regions}
+              selected={selectedRegions}
+              onToggle={toggleRegion}
+              onClear={() => setSelectedRegions(new Set())}
             />
           </div>
         </div>
       )}
 
-      {/* Bottom-left: legend */}
-      {meta && (
-        <div className="absolute bottom-6 left-4 z-10">
-          <Legend mode={mode} agencies={meta.agencies} />
-        </div>
-      )}
-
-      <SidePanel project={selected} mode={mode} onClose={() => setSelected(null)} />
+      <SidePanel
+        project={selected}
+        siblings={members && members.length > 1 ? members : null}
+        activeIndex={activeIndex}
+        onSwitch={setActiveIndex}
+        onClose={() => setMembers(null)}
+      />
 
       {loading && (
         <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">

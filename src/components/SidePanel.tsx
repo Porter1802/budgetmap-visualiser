@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import * as Plot from "@observablehq/plot";
-import { agencyBucket, statusMeta } from "@/lib/tokens";
+import { statusMeta } from "@/lib/tokens";
 import { formatCompact, formatFull } from "@/lib/format";
-import type { ProjectProps, MapMode } from "@/lib/types";
+import type { ProjectProps } from "@/lib/types";
 
 const OFFICIAL = "https://budgetmap.treasury.qld.gov.au/";
 
@@ -19,11 +19,15 @@ const SEGMENTS: { key: keyof ProjectProps; label: string; color: string }[] = [
 
 export default function SidePanel({
   project,
-  mode,
+  siblings,
+  activeIndex,
+  onSwitch,
   onClose,
 }: {
   project: ProjectProps | null;
-  mode: MapMode;
+  siblings: ProjectProps[] | null; // other projects at the same coordinate
+  activeIndex: number;
+  onSwitch: (i: number) => void;
   onClose: () => void;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -65,8 +69,7 @@ export default function SidePanel({
 
   if (!project) return null;
 
-  const bucket = agencyBucket(project.agency);
-  const tabColor = mode === "agency" ? bucket.css : "#005EB8";
+  const tabColor = "#005EB8";
   const status = statusMeta(project.status);
   const segs = SEGMENTS.map((s) => ({
     ...s,
@@ -108,6 +111,35 @@ export default function SidePanel({
           </svg>
         </button>
       </div>
+
+      {siblings && (
+        <div className="border-t border-qld-light px-6 py-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-qld-dark">
+            {siblings.length} projects at this location
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {siblings.map((s, i) => {
+              const active = i === activeIndex;
+              return (
+                <button
+                  key={s.project_id}
+                  onClick={() => onSwitch(i)}
+                  aria-pressed={active}
+                  title={s.name ?? "Untitled project"}
+                  className={[
+                    "max-w-[180px] truncate rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200",
+                    active
+                      ? "bg-qld-blue text-qld-white"
+                      : "border border-qld-blue bg-qld-white text-qld-blue hover:bg-qld-info-lighter",
+                  ].join(" ")}
+                >
+                  {s.name ?? "Untitled project"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-qld-light px-6 py-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-qld-dark">Total funding</p>
