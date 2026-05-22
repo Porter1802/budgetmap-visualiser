@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: mart_sa2_summary
+    description: One row per SA2 x financial year — the "my SA2" page spine.
+    columns:
+      - name: sa2_code
+        tests: [not_null]
+      - name: total_funding_aud
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [sa2_code, financial_year]
+
+  - name: mart_project_enriched
+    columns:
+      - name: project_id
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [project_id, package_id]
+
+  - name: mart_funding_by_sa2_agency_year
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [sa2_code, financial_year, agency_name, funding_source]
+
+  - name: mart_h3_hexbin_r7
+    columns:
+      - name: h3_index
+        tests: [not_null, unique]
+
+  - name: mart_project_history
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [project_id, package_id]

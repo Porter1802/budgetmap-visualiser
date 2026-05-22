@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_projects
+    description: One row per project per package.
+    columns:
+      - name: project_id
+        tests: [not_null]
+      - name: package_id
+        tests: [not_null]
+      - name: category
+        tests:
+          - accepted_values:
+              values: ["other", "capital", "school", "police", "hospital"]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [project_id, package_id]
+
+  - name: stg_project_funding
+    columns:
+      - name: funding_source
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["qld", "fed", "local", "own_src", "private"]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [project_id, package_id, funding_source]
+
+  - name: stg_project_location_sa2
+    columns:
+      - name: overlap_fraction
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+
+  - name: stg_sa2
+    columns:
+      - name: sa2_code
+        tests: [not_null, unique]

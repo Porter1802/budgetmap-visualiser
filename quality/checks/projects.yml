@@ -1,0 +1,31 @@
+# Quality gates on the ingested fact tables. Run after the projects asset.
+checks for projects:
+  - row_count > 0
+  - missing_count(project_id) = 0
+  - missing_count(package_id) = 0
+  - invalid_count(category) = 0:
+      valid values: [other, capital, school, police, hospital]
+  - duplicate_count(project_id, package_id) = 0
+
+checks for project_funding:
+  - invalid_count(funding_source) = 0:
+      valid values: [qld, fed, local, own_src, private]
+  - invalid_count(total_amount_aud) = 0:
+      valid min: 0
+
+checks for project_locations:
+  # Every non-excluded location with coords must have a valid geometry.
+  - failed rows:
+      name: location_missing_geom
+      fail query: |
+        select location_id
+        from project_locations
+        where excluded = false
+          and latitude is not null and longitude is not null
+          and geom is null
+  - failed rows:
+      name: invalid_geometry
+      fail query: |
+        select location_id
+        from project_locations
+        where geom is not null and not st_isvalid(geom)

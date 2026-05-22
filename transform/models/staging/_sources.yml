@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: atlas
+    schema: public
+    description: Canonical PostGIS tables populated by the Dagster ingest.
+    tables:
+      - name: projects
+      - name: project_locations
+      - name: project_funding
+      - name: project_location_sa2
+      - name: sa2
+      - name: lga
+      - name: rdp_region
+      - name: seifa
+      - name: population_erp
+      - name: census_2021
+      - name: crime_offences
+      - name: rental_bonds
+      - name: tree_canopy_sa2
+      - name: transit_isochrone_30min

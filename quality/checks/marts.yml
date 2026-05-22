@@ -1,0 +1,10 @@
+# Quality gates on the dbt marts (schema: marts). Run after dbt build.
+checks for marts.mart_sa2_summary:
+  - duplicate_count(sa2_code, financial_year) = 0
+  - missing_count(sa2_code) = 0
+  - invalid_count(total_funding_aud) = 0:
+      valid min: 0
+
+checks for marts.mart_h3_hexbin_r7:
+  - duplicate_count(h3_index) = 0
+  - missing_count(h3_index) = 0
