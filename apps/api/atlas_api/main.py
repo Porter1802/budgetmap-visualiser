@@ -101,6 +101,14 @@ def hexbin() -> dict:
     }
 
 
+@app.get("/analytics/funding-by-agency")
+def analytics_funding_by_agency(limit: int = Query(25, le=100)) -> list[dict]:
+    """Heavy rollup served from the DuckDB/GeoParquet lakehouse mirror."""
+    from .lake import funding_by_agency
+
+    return funding_by_agency(limit)
+
+
 @app.get("/search")
 async def search(q: str = Query(..., min_length=3)) -> dict:
     """Geocode an address (Nominatim) and resolve it to its containing SA2."""
