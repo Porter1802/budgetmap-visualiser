@@ -44,6 +44,9 @@ export default function MapView({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
+  // Rounded zoom drives proximity clustering; stepping by whole levels keeps
+  // rebuilds cheap while pins still merge/split as the user zooms.
+  const [clusterZoom, setClusterZoom] = useState(5);
 
   // Init MapLibre + deck.gl overlay once.
   useEffect(() => {
@@ -68,7 +71,14 @@ export default function MapView({
     const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
     map.addControl(overlay);
 
-    map.on("load", () => setReady(true));
+    map.on("load", () => {
+      setReady(true);
+      setClusterZoom(Math.round(map.getZoom()));
+    });
+    map.on("zoom", () => {
+      const z = Math.round(map.getZoom());
+      setClusterZoom((prev) => (prev === z ? prev : z));
+    });
     mapRef.current = map;
     overlayRef.current = overlay;
 
@@ -91,6 +101,7 @@ export default function MapView({
       hoveredKey,
       selectedId,
       reducedMotion,
+      zoom: clusterZoom,
     });
 
     overlay.setProps({
@@ -132,7 +143,7 @@ export default function MapView({
         );
       },
     });
-  }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, ready]);
+  }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, clusterZoom, ready]);
 
   // Zoom to a region's bounds when the sidebar requests focus. The nonce lets
   // the same region re-trigger a fly-to on repeated clicks.
