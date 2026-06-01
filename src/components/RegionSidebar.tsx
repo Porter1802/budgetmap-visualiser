@@ -1,7 +1,7 @@
 "use client";
 
 import { CATEGORY_HEX, CATEGORY_LABEL, QLD } from "@/lib/tokens";
-import { CATEGORY_PATH, isFacility } from "@/lib/icons";
+import { CATEGORY_PATH, hasGlyph } from "@/lib/icons";
 import type { ProjectCategory, RegionMeta } from "@/lib/types";
 
 // Fixed display order; only categories present in the data are shown.
@@ -74,7 +74,7 @@ export default function RegionSidebar({
                 aria-pressed={active}
                 className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors hover:bg-qld-info-lighter"
               >
-                {isFacility(cat) ? (
+                {hasGlyph(cat) ? (
                   <svg
                     width="14"
                     height="14"
