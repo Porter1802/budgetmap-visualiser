@@ -100,6 +100,99 @@ def region_codes(project):
     return sorted(set(codes))
 
 
+# ── Auto text description ─────────────────────────────────────────────────────
+# Faithful port of autotext.js (setAutoText / autoText) — the official Budget Map
+# app's description generator. It stitches the editable "active" description
+# together with the project's funding programs and budget-year delivery partners.
+# The two externals the JS leans on are pinned from the published app bundle:
+#   ProgramState = { INCLUDED: 0, EXCLUDED: 1 }
+# (BudgetYear / money() only fed the dropped funding sentence, so they don't
+# affect the text and are omitted.)
+PROGRAM_STATE_EXCLUDED = 1
+
+
+def auto_text(project):
+    funding = project.get("projectFunding") or {}
+
+    # Budget-year funding (the *Funding fields, not the total*Funding ones) drives
+    # the "delivered in partnership with" clause.
+    by_fed = funding.get("fedFunding") or 0
+    by_lg = funding.get("localFunding") or 0
+    by_pvt = funding.get("privateFunding") or 0
+
+    str_qld_prog = project.get("qldProgramName")
+    str_fed_prog = project.get("fedProgramName")
+    str_lg_name = project.get("localPartner")
+    desc_overide = project.get("overideDescription")
+    qa_desc = (project.get("qaDescription") or "").strip()
+    tr_desc = (project.get("trDescription") or "").strip()
+
+    # A program only contributes text when it has a name and isn't flagged EXCLUDED.
+    is_part_qld = bool(str_qld_prog) and project.get("qldProgramState") != PROGRAM_STATE_EXCLUDED
+    is_part_fed = bool(str_fed_prog) and project.get("fedProgramState") != PROGRAM_STATE_EXCLUDED
+
+    # Description precedence: TR review > QA review > the raw active description.
+    active_desc = (project.get("description") or "").strip()
+    if tr_desc:
+        active_desc = tr_desc
+    elif qa_desc:
+        active_desc = qa_desc
+
+    if desc_overide and desc_overide.strip():
+        desc_overide = desc_overide.strip()
+    elif active_desc:
+        active_desc += " " if active_desc[-1] == "." else ". "
+    else:
+        active_desc = "<Active Text> "
+
+    if is_part_fed:
+        disp_progs = (
+            "Part of the " + str_qld_prog + " and the " + str_fed_prog
+            if is_part_qld
+            else "Part of the " + str_fed_prog
+        )
+    elif is_part_qld:
+        disp_progs = "Part of the " + str_qld_prog
+    else:
+        disp_progs = ""
+
+    disp_del = ", delivered in partnership with" if disp_progs else " Delivered in partnership with"
+
+    disp_part = []
+    if by_pvt > 0:
+        disp_part.append(" the private sector")
+    if by_lg > 0:
+        disp_part.append(" local government" if str_lg_name == "Multiple Regional Councils"
+                         else " the " + (str_lg_name or "<Local Government Partner>"))
+    if by_fed > 0 and not is_part_fed:
+        disp_part.append(" the Australian Government")
+    if by_fed > 0 and is_part_fed:
+        disp_part.append(" the Australian Government")
+
+    if len(disp_part) == 3:
+        disp_partners = disp_part[2] + "," + disp_part[1] + " and" + disp_part[0]
+    elif len(disp_part) == 2:
+        disp_partners = disp_part[1] + " and" + disp_part[0]
+    elif len(disp_part) == 1:
+        disp_partners = disp_part[0]
+    else:
+        disp_partners = ""
+        disp_del = ""
+
+    activity_word = project.get("activityWord")
+    prefix = activity_word.strip() + " " if (activity_word and activity_word.strip()) else ""
+
+    text = prefix + active_desc + disp_progs + disp_del + disp_partners
+    if disp_progs or disp_partners:
+        text += "."
+
+    # An override replaces the whole thing.
+    if desc_overide and desc_overide.strip():
+        text = desc_overide.strip()
+
+    return text
+
+
 def to_feature(project):
     lon = project.get("longitude")
     lat = project.get("latitude")
@@ -116,7 +209,7 @@ def to_feature(project):
         "properties": {
             "project_id": project["id"],
             "name": project.get("name"),
-            "description": project.get("description"),
+            "description": auto_text(project),
             "agency": clean_agency(agency.get("name")),
             "type": ptype.get("name"),
             "status": project.get("status"),
