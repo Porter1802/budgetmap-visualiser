@@ -5,8 +5,10 @@ import dynamic from "next/dynamic";
 import SearchBox from "@/components/SearchBox";
 import RegionSidebar from "@/components/RegionSidebar";
 import SidePanel from "@/components/SidePanel";
+import InsightsPanel from "@/components/InsightsPanel";
 import { formatCompact } from "@/lib/format";
 import { allRegionsBounds, regionBounds, type Bounds } from "@/lib/geo";
+import { readUrlState, writeUrlState } from "@/lib/urlState";
 import type {
   FeatureCollection,
   ProjectCategory,
@@ -22,9 +24,16 @@ const MapView = dynamic(() => import("@/components/Map"), {
   loading: () => <SkeletonMap />,
 });
 
+const ALL_CATEGORIES: ProjectCategory[] = ["capital", "other", "school", "police", "hospital"];
+const SEARCH_RESULTS_MAX = 8;
+
 function passesRegion(f: ProjectFeature, selected: Set<number>): boolean {
   if (selected.size === 0) return true;
   return f.properties.region_codes.some((c) => selected.has(c));
+}
+
+function coordsOf(f: ProjectFeature): [number, number] | null {
+  return f.geometry.type === "Point" ? (f.geometry.coordinates as [number, number]) : null;
 }
 
 export default function Page() {
@@ -35,14 +44,21 @@ export default function Page() {
   const [search, setSearch] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<Set<number>>(new Set());
   const [categories, setCategories] = useState<Set<ProjectCategory>>(
-    new Set<ProjectCategory>(["capital", "other", "school", "police", "hospital"])
+    new Set<ProjectCategory>(ALL_CATEGORIES)
   );
+  const [sizeByFunding, setSizeByFunding] = useState(false);
   const [members, setMembers] = useState<ProjectProps[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [focusBounds, setFocusBounds] = useState<{ bounds: Bounds; nonce: number } | null>(null);
+  const [focusPoint, setFocusPoint] = useState<{ coords: [number, number]; nonce: number } | null>(
+    null
+  );
   const focusNonce = useRef(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // URL state is applied once after data loads; only then start writing it back.
+  const hydrated = useRef(false);
 
   useEffect(() => {
     setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -55,6 +71,29 @@ export default function Page() {
       setRegions(rc);
       setMeta(m);
       setLoading(false);
+
+      // Restore a shared view from the URL hash (filters + selected project).
+      const url = readUrlState();
+      if (url.q) setSearch(url.q);
+      if (url.regions.length) setSelectedRegions(new Set(url.regions));
+      if (url.categories) setCategories(new Set(url.categories));
+      if (url.sizeByFunding) setSizeByFunding(true);
+      if (url.projectId != null) {
+        const f = fc.features.find((x) => x.properties.project_id === url.projectId);
+        if (f) {
+          const coords = coordsOf(f);
+          const siblings = coords
+            ? fc.features.filter((x) => {
+                const c = coordsOf(x);
+                return c && c[0] === coords[0] && c[1] === coords[1];
+              })
+            : [f];
+          setMembers(siblings.map((s) => s.properties));
+          setActiveIndex(siblings.indexOf(f));
+          if (coords) setFocusPoint({ coords, nonce: ++focusNonce.current });
+        }
+      }
+      hydrated.current = true;
     });
   }, []);
 
@@ -83,6 +122,60 @@ export default function Page() {
     [shown]
   );
 
+  // Dropdown feed: the highest-funded matches within the active filters.
+  const searchResults = useMemo(() => {
+    if (!search.trim()) return [];
+    return [...shown]
+      .sort((a, b) => b.properties.total_funding - a.properties.total_funding)
+      .slice(0, SEARCH_RESULTS_MAX);
+  }, [shown, search]);
+
+  const selected = members ? members[activeIndex] ?? null : null;
+
+  // Keep the URL in sync so any view is shareable.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    writeUrlState({
+      q: search,
+      regions: [...selectedRegions],
+      categories: categories.size === ALL_CATEGORIES.length ? null : [...categories],
+      projectId: selected?.project_id ?? null,
+      sizeByFunding,
+    });
+  }, [search, selectedRegions, categories, selected, sizeByFunding]);
+
+  // Global shortcuts: "/" focuses search, Esc closes the panel / clears search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === "Escape" && !typing) {
+        if (members) setMembers(null);
+        else if (search) setSearch("");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [members, search]);
+
+  // Open a specific project (search result or insights row): select it along
+  // with any co-located siblings, and fly the map to it.
+  const openProject = (f: ProjectFeature) => {
+    const coords = coordsOf(f);
+    const siblings = coords
+      ? features.filter((x) => {
+          const c = coordsOf(x);
+          return c && c[0] === coords[0] && c[1] === coords[1];
+        })
+      : [f];
+    setMembers(siblings.map((s) => s.properties));
+    setActiveIndex(Math.max(0, siblings.indexOf(f)));
+    if (coords) setFocusPoint({ coords, nonce: ++focusNonce.current });
+  };
+
   const focusRegion = (code: number) => {
     setSelectedRegions(new Set([code]));
     if (!regions) return;
@@ -104,8 +197,6 @@ export default function Page() {
       return next;
     });
 
-  const selected = members ? members[activeIndex] ?? null : null;
-
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <MapView
@@ -119,6 +210,8 @@ export default function Page() {
         }}
         reducedMotion={reducedMotion}
         focusBounds={focusBounds}
+        focusPoint={focusPoint}
+        sizeByFunding={sizeByFunding}
       />
 
       {/* Top-left: title + search */}
@@ -137,7 +230,13 @@ export default function Page() {
           </p>
         </div>
         <div className="pointer-events-auto">
-          <SearchBox value={search} onChange={setSearch} />
+          <SearchBox
+            value={search}
+            onChange={setSearch}
+            results={searchResults}
+            onPick={openProject}
+            inputRef={searchInputRef}
+          />
         </div>
         {meta && (
           <div className="pointer-events-auto">
@@ -151,10 +250,19 @@ export default function Page() {
               onToggleOpen={() => setSidebarOpen((o) => !o)}
               onFocus={focusRegion}
               onClear={clearRegions}
+              sizeByFunding={sizeByFunding}
+              onToggleSizeByFunding={() => setSizeByFunding((v) => !v)}
             />
           </div>
         )}
       </div>
+
+      {/* Bottom-left: live insights for the current filter */}
+      {meta && (
+        <div className="absolute bottom-4 left-4 z-10">
+          <InsightsPanel features={shown} regions={meta.regions} onPick={openProject} />
+        </div>
+      )}
 
       <SidePanel
         project={selected}
