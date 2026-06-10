@@ -28,6 +28,8 @@ export default function MapView({
   onSelect,
   reducedMotion,
   focusBounds,
+  focusPoint,
+  sizeByFunding,
 }: {
   features: ProjectFeature[];
   regions: RegionCollection | null;
@@ -36,6 +38,8 @@ export default function MapView({
   onSelect: (members: ProjectProps[], coords: [number, number]) => void;
   reducedMotion: boolean;
   focusBounds: { bounds: Bounds; nonce: number } | null;
+  focusPoint: { coords: [number, number]; nonce: number } | null;
+  sizeByFunding: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -102,6 +106,7 @@ export default function MapView({
       selectedId,
       reducedMotion,
       zoom: clusterZoom,
+      sizeByFunding,
     });
 
     overlay.setProps({
@@ -143,7 +148,7 @@ export default function MapView({
         );
       },
     });
-  }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, clusterZoom, ready]);
+  }, [features, regions, selectedRegions, hoveredKey, selectedId, reducedMotion, clusterZoom, ready, sizeByFunding]);
 
   // Zoom to a region's bounds when the sidebar requests focus. The nonce lets
   // the same region re-trigger a fly-to on repeated clicks.
@@ -156,6 +161,17 @@ export default function MapView({
       essential: true,
     });
   }, [focusBounds, ready, reducedMotion]);
+
+  // Fly to a single project when search/insights pick one.
+  useEffect(() => {
+    if (!focusPoint || !mapRef.current || !ready) return;
+    mapRef.current.flyTo({
+      center: focusPoint.coords,
+      zoom: Math.max(mapRef.current.getZoom(), 11),
+      duration: reducedMotion ? 0 : 1200,
+      essential: true,
+    });
+  }, [focusPoint, ready, reducedMotion]);
 
   return (
     <div className="absolute inset-0">

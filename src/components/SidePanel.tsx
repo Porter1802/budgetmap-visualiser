@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Plot from "@observablehq/plot";
 import { CATEGORY_HEX, statusMeta } from "@/lib/tokens";
 import { formatCompact, formatFull } from "@/lib/format";
@@ -40,6 +40,10 @@ export default function SidePanel({
   onClose: () => void;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Reset the copy confirmation when switching projects.
+  useEffect(() => setCopied(false), [project?.project_id]);
 
   useEffect(() => {
     const el = chartRef.current;
@@ -87,7 +91,7 @@ export default function SidePanel({
   })).filter((s) => s.value > 0);
 
   return (
-    <aside className="panel-in panel-scroll absolute right-0 top-0 z-20 flex h-full w-[420px] flex-col overflow-y-auto border-l border-qld-light bg-qld-white">
+    <aside className="panel-in panel-scroll absolute right-0 top-0 z-20 flex h-full w-full max-w-[420px] flex-col overflow-y-auto border-l border-qld-light bg-qld-white">
       <div className="relative flex items-start gap-3 px-6 pb-4 pt-5">
         <span className="absolute left-0 top-0 h-full w-1" style={{ background: tabColor }} aria-hidden />
         <div className="min-w-0 flex-1">
@@ -209,7 +213,7 @@ export default function SidePanel({
         </div>
       )}
 
-      <div className="mt-auto border-t border-qld-light px-6 py-4">
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-qld-light px-6 py-4">
         <a
           href={project.web_link || OFFICIAL}
           target="_blank"
@@ -218,6 +222,18 @@ export default function SidePanel({
         >
           View on official Budget Map →
         </a>
+        <button
+          onClick={() => {
+            // The URL hash already encodes this view; just put it on the clipboard.
+            navigator.clipboard?.writeText(window.location.href).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+          className="shrink-0 rounded-md border border-qld-blue px-3 py-1.5 text-xs font-medium text-qld-blue transition-colors hover:bg-qld-info-lighter"
+        >
+          {copied ? "Copied ✓" : "Copy link"}
+        </button>
       </div>
     </aside>
   );

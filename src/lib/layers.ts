@@ -38,6 +38,22 @@ interface BuildArgs {
   selectedId: number | null;
   reducedMotion: boolean;
   zoom: number; // current (rounded) map zoom — drives proximity clustering
+  sizeByFunding: boolean; // scale pins by cluster funding instead of fixed size
+}
+
+// Pin radius range when "size by funding" is on. Area (radius²) tracks the
+// square root of funding so a $9b cluster doesn't drown out everything else.
+const FUND_MIN_RADIUS = 5;
+const FUND_MAX_RADIUS = 24;
+
+function clusterFunding(c: ClusterPoint): number {
+  return c.members.reduce((s, m) => s + m.properties.total_funding, 0);
+}
+
+function fundingRadius(c: ClusterPoint, maxFunding: number): number {
+  const f = clusterFunding(c);
+  if (maxFunding <= 0 || f <= 0) return FUND_MIN_RADIUS;
+  return FUND_MIN_RADIUS + (FUND_MAX_RADIUS - FUND_MIN_RADIUS) * Math.sqrt(f / maxFunding);
 }
 
 function passesRegion(f: ProjectFeature, selected: Set<number>): boolean {
@@ -115,7 +131,8 @@ const TRANSITION = (reduced: boolean) =>
       };
 
 export function buildLayers(args: BuildArgs): Layer[] {
-  const { regions, selectedRegions, hoveredKey, selectedId, reducedMotion, zoom } = args;
+  const { regions, selectedRegions, hoveredKey, selectedId, reducedMotion, zoom, sizeByFunding } =
+    args;
   const layers: Layer[] = [];
 
   // ── Region polygons (blue) ────────────────────────────────────────────────
@@ -160,6 +177,8 @@ export function buildLayers(args: BuildArgs): Layer[] {
   const isActive = (c: ClusterPoint) =>
     c.key === hoveredKey || c.members.some((m) => m.properties.project_id === selectedId);
 
+  const maxFunding = sizeByFunding ? Math.max(0, ...clusters.map(clusterFunding)) : 0;
+
   // ── Budget pins (blue dots, fixed size) ─────────────────────────────────────
   layers.push(
     new ScatterplotLayer<ClusterPoint>({
@@ -172,10 +191,15 @@ export function buildLayers(args: BuildArgs): Layer[] {
       lineWidthUnits: "pixels",
       getPosition: (c) => c.coords,
       getRadius: (c) => {
-        // Nudge the dot larger as a cluster grows so denser spots read as
-        // weightier, capping the growth so it never dominates the map.
-        const n = c.members.length;
-        const base = n > 1 ? DOT_RADIUS + 3 + Math.min(Math.log2(n) * 1.5, 6) : DOT_RADIUS;
+        let base: number;
+        if (sizeByFunding) {
+          base = fundingRadius(c, maxFunding);
+        } else {
+          // Nudge the dot larger as a cluster grows so denser spots read as
+          // weightier, capping the growth so it never dominates the map.
+          const n = c.members.length;
+          base = n > 1 ? DOT_RADIUS + 3 + Math.min(Math.log2(n) * 1.5, 6) : DOT_RADIUS;
+        }
         return isActive(c) ? base * 1.25 : base;
       },
       getFillColor: (c) => {
@@ -188,7 +212,7 @@ export function buildLayers(args: BuildArgs): Layer[] {
       updateTriggers: {
         getFillColor: [hoveredKey, selectedRegions],
         getLineColor: [hoveredKey, selectedId, selectedRegions],
-        getRadius: [hoveredKey, selectedId],
+        getRadius: [hoveredKey, selectedId, sizeByFunding],
       },
       transitions: TRANSITION(reducedMotion) as object | undefined,
     })
@@ -203,14 +227,19 @@ export function buildLayers(args: BuildArgs): Layer[] {
       getPosition: (c) => c.coords,
       getIcon: (c) => GLYPH_ICONS[c.category as "capital" | "school" | "police" | "hospital"],
       sizeUnits: "pixels",
-      getSize: (c) => (isActive(c) ? ICON_SIZE * 1.25 : ICON_SIZE),
+      getSize: (c) => {
+        // Funding-scaled glyphs use the same radius scale as the dots
+        // (doubled, since icon size is a diameter).
+        const base = sizeByFunding ? fundingRadius(c, maxFunding) * 2 : ICON_SIZE;
+        return isActive(c) ? base * 1.25 : base;
+      },
       getColor: (c) => {
         const active = c.key === hoveredKey;
         return rgba(BLUE, c.visible ? (active ? 1 : 0.9) : 0.18);
       },
       updateTriggers: {
         getColor: [hoveredKey, selectedRegions],
-        getSize: [hoveredKey, selectedId],
+        getSize: [hoveredKey, selectedId, sizeByFunding],
       },
       transitions: TRANSITION(reducedMotion) as object | undefined,
     })

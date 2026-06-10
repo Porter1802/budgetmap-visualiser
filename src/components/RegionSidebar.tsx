@@ -19,6 +19,8 @@ export default function RegionSidebar({
   onToggleOpen,
   onFocus,
   onClear,
+  sizeByFunding,
+  onToggleSizeByFunding,
 }: {
   regions: RegionMeta[];
   selected: Set<number>;
@@ -29,6 +31,8 @@ export default function RegionSidebar({
   onToggleOpen: () => void;
   onFocus: (code: number) => void;
   onClear: () => void;
+  sizeByFunding: boolean;
+  onToggleSizeByFunding: () => void;
 }) {
   const allActive = selected.size === 0;
   const cats = CATEGORY_ORDER.filter((c) => (categoryCounts[c] ?? 0) > 0);
@@ -106,6 +110,32 @@ export default function RegionSidebar({
               </button>
             );
           })}
+
+          <p className="border-t border-qld-light px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-qld-dark">
+            Display
+          </p>
+          <button
+            onClick={onToggleSizeByFunding}
+            role="switch"
+            aria-checked={sizeByFunding}
+            className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm text-qld-darkest transition-colors hover:bg-qld-info-lighter"
+          >
+            <span>Scale pins by funding</span>
+            <span
+              className={[
+                "relative h-4 w-7 shrink-0 rounded-full transition-colors duration-200",
+                sizeByFunding ? "bg-qld-blue" : "bg-qld-light",
+              ].join(" ")}
+              aria-hidden
+            >
+              <span
+                className={[
+                  "absolute top-0.5 h-3 w-3 rounded-full bg-qld-white transition-all duration-200",
+                  sizeByFunding ? "left-3.5" : "left-0.5",
+                ].join(" ")}
+              />
+            </span>
+          </button>
 
           <p className="border-t border-qld-light px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-qld-dark">
             Regions

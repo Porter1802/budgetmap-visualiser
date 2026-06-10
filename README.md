@@ -63,6 +63,20 @@ joined by `RDP_code`) and region metadata (`/api/regions`). Each project's
 - **Observable Plot** — funding breakdown bar, themed to blue tints
 - **Noto Sans + IBM Plex Mono**, self-hosted via `next/font`
 
+## Interaction
+
+- **Deep links** — search, region/category filters, the funding-size toggle and
+  the open project are serialised into the URL hash (`#q=…&r=…&c=…&p=…&fund=1`),
+  so any view is shareable. The side panel has a **Copy link** button.
+- **Search typeahead** — results (highest-funded first, within the active
+  filters) fly the map to the project and open its panel. `/` focuses search,
+  `Esc` closes the panel / clears the query, arrows + Enter drive the list.
+- **Insights card** (bottom-left) — live top-projects list, funding-by-region
+  bars (Observable Plot) and a CSV export, all derived from the projects
+  currently passing the filters.
+- **Scale pins by funding** — sidebar toggle swaps fixed-size pins for a
+  square-root funding scale so the big-money clusters stand out.
+
 ## Design
 
 One source of truth for the palette: `src/lib/tokens.ts` (canvas RGB) mirrored
